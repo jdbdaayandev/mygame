@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jdbd Games | Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            /* Standard, clean color palette */
+            --bg-color: #f3f4f6;
+            --bg-card: #ffffff;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --primary: #2563eb; /* Standard web blue */
+            --primary-hover: #1d4ed8;
+            --border-color: #e5e7eb;
+            --transition: all 0.2s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header / Navbar */
+        header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+
+        .logo span {
+            color: var(--primary);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: var(--transition);
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 60px 20px 40px;
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            color: var(--text-main);
+            margin-bottom: 15px;
+            font-weight: 700;
+            letter-spacing: -1px;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+            color: var(--text-muted);
+        }
+
+        /* Game Grid */
+        .portal-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px 80px;
+            flex-grow: 1;
+        }
+
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        /* Game Card */
+        .game-card {
+            background: var(--bg-card);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 20px rgba(0,0,0,0.1);
+        }
+
+        .card-image {
+            height: 160px;
+            background: #f9fafb;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3.5rem;
+            color: #d1d5db;
+            transition: var(--transition);
+        }
+
+        .game-card:hover .card-image {
+            color: var(--primary);
+            background: #f0fdf4; /* Slight tint on hover */
+        }
+
+        .card-content {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            color: var(--text-main);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .card-desc {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            flex-grow: 1;
+        }
+
+        .play-btn {
+            display: block;
+            text-align: center;
+            background: var(--primary);
+            color: #ffffff;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .play-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 25px 20px;
+            background: var(--bg-card);
+            border-top: 1px solid var(--border-color);
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2rem; }
+            .nav-links { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="nav-container">
+            <a href="#" class="logo">Jdbd<span>Games</span></a>
+            <ul class="nav-links">
+                <li><a href="#"><i class="fas fa-home"></i> Home</a></li>
+                <li><a href="#"><i class="fas fa-trophy"></i> Leaderboards</a></li>
+                <li><a href="#"><i class="fas fa-user"></i> My Profile</a></li>
+            </ul>
+        </div>
+    </header>
+
+    <section class="hero">
+        <h1>Select a Game</h1>
+        <p>Welcome to the Jdbd Games portal. Choose a title below to start playing.</p>
+    </section>
+
+    <div class="portal-container">
+        <div class="game-grid">
+            
+            <div class="game-card">
+                <div class="card-image">
+                    <i class="fas fa-spade"></i>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Klondike Solitaire</h3>
+                    <p class="card-desc">The classic card game featuring smooth drag-and-drop mechanics, Draw 3 rules, and smart auto-play.</p>
+                    <a href="solitaire.html" class="play-btn">Play Now</a>
+                </div>
+            </div>
+
+            <div class="game-card">
+                <div class="card-image">
+                    <i class="fas fa-puzzle-piece"></i>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Puzzle Blocks</h3>
+                    <p class="card-desc">Arrange falling blocks to clear lines. A classic test of spatial awareness and quick thinking.</p>
+                    <a href="#" class="play-btn" style="background: var(--text-muted);" onclick="alert('Coming soon!')">Coming Soon</a>
+                </div>
+            </div>
+
+            <div class="game-card">
+                <div class="card-image">
+                    <i class="fas fa-chess-knight"></i>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Chess AI</h3>
+                    <p class="card-desc">Challenge an advanced artificial intelligence in a standard game of chess. Adjustable difficulty levels.</p>
+                    <a href="#" class="play-btn" style="background: var(--text-muted);" onclick="alert('Coming soon!')">Coming Soon</a>
+                </div>
+            </div>
+
+            <div class="game-card">
+                <div class="card-image">
+                    <i class="fas fa-dice"></i>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Yahtzee</h3>
+                    <p class="card-desc">Roll the dice and score combinations in this classic board game translated for the web.</p>
+                    <a href="#" class="play-btn" style="background: var(--text-muted);" onclick="alert('Coming soon!')">Coming Soon</a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Jdbd Games. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>

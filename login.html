@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jdbd Games | Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            /* Standard, clean color palette matching the portal */
+            --bg-color: #f3f4f6;
+            --bg-card: #ffffff;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --primary: #2563eb; 
+            --primary-hover: #1d4ed8;
+            --border-color: #e5e7eb;
+            --input-bg: #f9fafb;
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* Logo */
+        .logo-container {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-main);
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+
+        .logo span {
+            color: var(--primary);
+        }
+
+        /* Authentication Card */
+        .auth-container {
+            background: var(--bg-card);
+            width: 100%;
+            max-width: 400px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        /* Toggle Tabs */
+        .auth-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .auth-tab {
+            flex: 1;
+            text-align: center;
+            padding: 18px 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            background: #f9fafb;
+            transition: var(--transition);
+            border-bottom: 3px solid transparent;
+        }
+
+        .auth-tab.active {
+            background: var(--bg-card);
+            color: var(--primary);
+            border-bottom: 3px solid var(--primary);
+        }
+
+        .auth-tab:hover:not(.active) {
+            color: var(--text-main);
+        }
+
+        /* Forms */
+        .form-wrapper {
+            position: relative;
+            min-height: 300px; /* Reserves space so the card doesn't jump too much */
+        }
+
+        .auth-form {
+            padding: 30px;
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .auth-form.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Input Fields */
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-group label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 15px;
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 12px 15px 12px 40px; /* Left padding makes room for icon */
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--input-bg);
+            font-size: 0.95rem;
+            color: var(--text-main);
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .input-wrapper input:focus {
+            border-color: var(--primary);
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        /* Buttons */
+        .submit-btn {
+            background: var(--primary);
+            color: #ffffff;
+            border: none;
+            padding: 14px;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-top: 10px;
+        }
+
+        .submit-btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+
+        /* Helper Text */
+        .helper-text {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        .helper-text a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .helper-text a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="logo-container">
+        <a href="#" class="logo">Jdbd<span>Games</span></a>
+    </div>
+
+    <div class="auth-container">
+        <div class="auth-tabs">
+            <div class="auth-tab active" id="tab-login" onclick="switchForm('login')">Login</div>
+            <div class="auth-tab" id="tab-register" onclick="switchForm('register')">Register</div>
+        </div>
+
+        <div class="form-wrapper">
+            <form class="auth-form active" id="form-login" onsubmit="handleAuth(event, 'login')">
+                <div class="input-group">
+                    <label for="login-username">Username</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="login-username" placeholder="Enter your username" required>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="login-password">Password</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="login-password" placeholder="Enter your password" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn">Sign In</button>
+                <div class="helper-text">
+                    <a href="#">Forgot your password?</a>
+                </div>
+            </form>
+
+            <form class="auth-form" id="form-register" onsubmit="handleAuth(event, 'register')">
+                <div class="input-group">
+                    <label for="reg-username">Choose a Username</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="reg-username" placeholder="Create a username" required>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="reg-password">Create Password</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="reg-password" placeholder="Create a password" required>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="reg-confirm">Confirm Password</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-check-circle"></i>
+                        <input type="password" id="reg-confirm" placeholder="Repeat your password" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Function to toggle between Login and Register views
+        function switchForm(formType) {
+            // Update Tabs
+            document.getElementById('tab-login').classList.remove('active');
+            document.getElementById('tab-register').classList.remove('active');
+            document.getElementById(`tab-${formType}`).classList.add('active');
+
+            // Update Forms
+            document.getElementById('form-login').classList.remove('active');
+            document.getElementById('form-register').classList.remove('active');
+            document.getElementById(`form-${formType}`).classList.add('active');
+        }
+
+        // Function to handle form submission
+        function handleAuth(event, type) {
+            event.preventDefault(); // Prevent page from refreshing
+
+            const btn = event.target.querySelector('.submit-btn');
+            const originalText = btn.innerHTML;
+            
+            // Show a quick loading state
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            btn.style.opacity = '0.8';
+            btn.style.pointerEvents = 'none';
+
+            // Simulate a network delay, then redirect to the portal
+            setTimeout(() => {
+                if (type === 'register') {
+                    const pass = document.getElementById('reg-password').value;
+                    const confirm = document.getElementById('reg-confirm').value;
+                    
+                    if (pass !== confirm) {
+                        alert("Passwords do not match!");
+                        btn.innerHTML = originalText;
+                        btn.style.opacity = '1';
+                        btn.style.pointerEvents = 'auto';
+                        return;
+                    }
+                    alert("Account created successfully! Redirecting to portal...");
+                }
+
+                // Redirect to the main portal page
+                // Note: Change 'portal.html' to whatever your main page file is named!
+                window.location.href = 'portal.html'; 
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
