@@ -280,7 +280,7 @@
     </div>
 
     <script>
-        // --- DOM Elements --- (Accidentally deleted in the last update!)
+        // --- DOM Elements --- 
         const $board = document.getElementById('chessboard');
         const $status = document.getElementById('status');
         const $menu = document.getElementById('main-menu');
@@ -300,6 +300,7 @@
         let selectedSquare = null;
         let validMoves = [];
         let isDragging = false; 
+        let matchEnded = false; // NEW: Prevents disconnect errors when game ends naturally
 
         // --- TIMER VARIABLES ---
         let whiteTime = 0;
@@ -336,7 +337,7 @@
         function promptResign() {
             showModal(
                 "Resign Game",
-                "Are you sure you want to resign and return to the menu?",
+                "Are you sure you want to resign the game?",
                 [
                     { text: "Cancel", className: "btn outline", action: hideModal },
                     { text: '<i class="fas fa-flag"></i> Yes, Resign', className: "btn danger", action: executeResignation }
@@ -346,13 +347,19 @@
 
         function executeResignation() {
             hideModal();
+            matchEnded = true; // Lock state so disconnect modal doesn't fire
+            
             if ((currentMode === 'host' || currentMode === 'join') && connection) {
                 connection.send({ type: 'resign' });
-                // Delay returnToMenu slightly to ensure the network message is sent before closing connection
-                setTimeout(returnToMenu, 500);
-            } else {
-                returnToMenu();
             }
+            
+            // Show the losing modal to the player who resigned
+            stopTimer();
+            showModal(
+                "You Resigned",
+                "You have conceded the match. You lose.",
+                [{ text: "Return to Menu", className: "btn", action: returnToMenu }]
+            );
         }
 
         function returnToMenu() {
@@ -371,11 +378,13 @@
         }
 
         function handleDisconnect() {
-            if ($game.style.display === 'flex' && !game.game_over() && !isTimeOut && document.getElementById('custom-modal').style.display !== 'flex') {
+            // Only show disconnect error if the game didn't officially end yet
+            if (!matchEnded && $game.style.display === 'flex' && !game.game_over() && !isTimeOut) {
+                matchEnded = true; 
                 stopTimer();
                 showModal(
                     "Opponent Disconnected",
-                    "Your opponent has left the match.",
+                    "Your opponent has left the match unexpectedly.",
                     [{ text: "Return to Menu", className: "btn", action: returnToMenu }]
                 );
             }
@@ -473,15 +482,17 @@
         }
 
         function updateStatus() {
-            if (isTimeOut) return; 
+            if (isTimeOut || matchEnded) return; 
 
             let moveColor = (game.turn() === 'w') ? 'White' : 'Black';
             let statusHTML = '';
 
             if (game.in_checkmate()) {
+                matchEnded = true;
                 statusHTML = `Game Over - ${moveColor} Checkmated!`;
                 stopTimer();
             } else if (game.in_draw()) {
+                matchEnded = true;
                 statusHTML = 'Game Over - Draw!';
                 stopTimer();
             } else {
@@ -522,7 +533,7 @@
             if (timerInterval) clearInterval(timerInterval);
             
             timerInterval = setInterval(() => {
-                if (game.game_over() || isTimeOut) {
+                if (game.game_over() || isTimeOut || matchEnded) {
                     clearInterval(timerInterval);
                     return;
                 }
@@ -543,16 +554,23 @@
 
         function handleTimeOut(color) {
             isTimeOut = true;
+            matchEnded = true;
             stopTimer();
             let winner = color === 'w' ? 'Black' : 'White';
             $status.innerHTML = `Game Over - ${winner} wins on time!`;
+            
+            showModal(
+                "Time's Up!",
+                `${winner} wins the match on time.`,
+                [{ text: "Return to Menu", className: "btn", action: returnToMenu }]
+            );
         }
 
         // --- DRAG AND DROP LOGIC ---
         function handleDragStart(e, squareId) {
             isDragging = true;
             
-            if (game.game_over() || isTimeOut) { e.preventDefault(); return; }
+            if (game.game_over() || isTimeOut || matchEnded) { e.preventDefault(); return; }
             if ((currentMode === 'join' || currentMode === 'host') && game.turn() !== playerColor) { e.preventDefault(); return; }
             if (currentMode === 'ai' && game.turn() !== playerColor) { e.preventDefault(); return; }
 
@@ -597,7 +615,7 @@
 
         // --- INTERACTION LOGIC ---
         function handleSquareClick(squareId) {
-            if (game.game_over() || isTimeOut || isDragging) return; 
+            if (game.game_over() || isTimeOut || isDragging || matchEnded) return; 
 
             if (currentMode === 'join' || currentMode === 'host') {
                 if (game.turn() !== playerColor) return;
@@ -649,6 +667,7 @@
             playerColor = 'w';
             aiDepth = parseInt(document.getElementById('ai-difficulty').value);
             
+            matchEnded = false;
             game.reset();
             isTimeOut = false;
             stopTimer();
@@ -693,6 +712,7 @@
                         selectedSquare = null; validMoves = []; renderBoard();
                     }
                     if (data.type === 'resign') {
+                        matchEnded = true; // Lock state 
                         stopTimer();
                         showModal(
                             "You Win! \uD83C\uDFC6",
@@ -734,6 +754,7 @@
                         selectedSquare = null; validMoves = []; renderBoard();
                     }
                     if (data.type === 'resign') {
+                        matchEnded = true; // Lock state
                         stopTimer();
                         showModal(
                             "You Win! \uD83C\uDFC6",
@@ -756,6 +777,8 @@
         function setupNetworkGame(mode, timeInSeconds) {
             currentMode = mode;
             playerColor = mode === 'host' ? 'w' : 'b';
+            
+            matchEnded = false;
             game.reset();
 
             $menu.style.display = 'none';
