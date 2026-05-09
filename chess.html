@@ -813,8 +813,12 @@
         }
 
         function calculateBestMove(game, depth) {
-            const possibleMoves = game.moves();
+            let possibleMoves = game.moves();
             if (possibleMoves.length === 0) return null;
+
+            // FIX 1: Shuffle the moves randomly. 
+            // This prevents the AI from repeating the exact same back-and-forth loop when scores are tied.
+            possibleMoves.sort(() => Math.random() - 0.5);
 
             let bestValue = -9999;
             let bestMove = possibleMoves[0];
@@ -825,7 +829,10 @@
                 let boardValue = minimax(game, depth - 1, -10000, 10000, false);
                 game.undo();
                 
-                if (boardValue > bestValue) { bestValue = boardValue; bestMove = move; }
+                if (boardValue > bestValue) { 
+                    bestValue = boardValue; 
+                    bestMove = move; 
+                }
             }
             return bestMove;
         }
@@ -833,7 +840,9 @@
         function minimax(game, depth, alpha, beta, isMaximizingPlayer) {
             if (depth === 0 || game.game_over()) return evaluateBoard(game.board());
 
-            const possibleMoves = game.moves();
+            let possibleMoves = game.moves();
+            // Shuffle here as well for better variety
+            possibleMoves.sort(() => Math.random() - 0.5);
 
             if (isMaximizingPlayer) {
                 let bestVal = -9999;
@@ -866,6 +875,18 @@
                 for (let j = 0; j < 8; j++) {
                     if(boardState[i][j]) {
                         let val = pieceValues[boardState[i][j].type];
+                        
+                        // FIX 2: Positional Bonus
+                        // Encourage the AI to control the center of the board
+                        if (boardState[i][j].type !== 'k' && boardState[i][j].type !== 'r') {
+                            // Calculate how close the piece is to the center (rows 3,4 and cols 3,4)
+                            let rowDist = Math.abs(3.5 - i);
+                            let colDist = Math.abs(3.5 - j);
+                            // Grants up to +3.5 points for being exactly in the center
+                            let centerBonus = (7 - (rowDist + colDist)) * 0.5; 
+                            val += centerBonus;
+                        }
+
                         totalEvaluation += (boardState[i][j].color === 'b') ? val : -val;
                     }
                 }
