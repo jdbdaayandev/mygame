@@ -68,7 +68,7 @@
         .form-group label { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 5px; }
         .form-group select, .form-group input {
             width: 100%; padding: 12px; border-radius: 6px; border: 1px solid var(--border-color);
-            font-size: 1rem; outline: none; background: #f9fafb;
+            font-size: 1rem; outline: none; background: #f9fafb; text-transform: uppercase;
         }
         .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
 
@@ -230,12 +230,17 @@
 
             <div id="lobby-ui">
                 <p style="font-weight: bold; margin-bottom: 5px;">Your Room ID:</p>
-                <h2 id="room-id" style="letter-spacing: 2px; font-family: monospace;">Generating...</h2>
+                <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 10px;">
+                    <h2 id="room-id" style="letter-spacing: 2px; font-family: monospace; margin: 0;">Generating...</h2>
+                    <button id="copy-btn" class="btn outline" onclick="copyRoomId()" style="width: auto; margin: 0; padding: 6px 12px; font-size: 0.9rem; display: none;">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
                 <p style="font-size: 0.85rem; margin-top: 5px;">Give this code to your friend to join.</p>
             </div>
 
             <div style="margin-top: 20px;">
-                <input type="text" id="join-id" placeholder="Enter Friend's Room ID" style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 10px;">
+                <input type="text" id="join-id" placeholder="Enter Friend's Room ID" style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 10px; text-transform: uppercase;">
                 <button class="btn outline" onclick="joinGame()" id="join-btn">
                     <i class="fas fa-sign-in-alt"></i> Join Game
                 </button>
@@ -298,14 +303,6 @@
         let peer = null;
         let connection = null;
 
-        // --- DOM Elements ---
-        const $board = document.getElementById('chessboard');
-        const $status = document.getElementById('status');
-        const $menu = document.getElementById('main-menu');
-        const $game = document.getElementById('game-screen');
-        const $modeInd = document.getElementById('mode-indicator');
-        const $timers = document.getElementById('timers');
-
         // --- MODAL LOGIC ---
         function showModal(title, text, buttons) {
             document.getElementById('modal-title').innerText = title;
@@ -316,7 +313,7 @@
             buttons.forEach(btnInfo => {
                 const btn = document.createElement('button');
                 btn.className = btnInfo.className;
-                btn.innerHTML = btnInfo.text; // Allow icons in text
+                btn.innerHTML = btnInfo.text; 
                 btn.onclick = btnInfo.action;
                 actionsDiv.appendChild(btn);
             });
@@ -341,11 +338,13 @@
 
         function executeResignation() {
             hideModal();
-            // Tell the opponent we resigned
             if ((currentMode === 'host' || currentMode === 'join') && connection) {
                 connection.send({ type: 'resign' });
+                // Delay returnToMenu slightly to ensure the network message is sent before closing connection
+                setTimeout(returnToMenu, 500);
+            } else {
+                returnToMenu();
             }
-            returnToMenu();
         }
 
         function returnToMenu() {
@@ -357,9 +356,42 @@
             document.getElementById('lobby-ui').style.display = 'none';
             document.getElementById('host-btn').innerHTML = '<i class="fas fa-satellite-dish"></i> Host Game';
             document.getElementById('host-btn').disabled = false;
+            document.getElementById('copy-btn').style.display = 'none';
             
             $game.style.display = 'none';
             $menu.style.display = 'block';
+        }
+
+        function handleDisconnect() {
+            if ($game.style.display === 'flex' && !game.game_over() && !isTimeOut && document.getElementById('custom-modal').style.display !== 'flex') {
+                stopTimer();
+                showModal(
+                    "Opponent Disconnected",
+                    "Your opponent has left the match.",
+                    [{ text: "Return to Menu", className: "btn", action: returnToMenu }]
+                );
+            }
+        }
+
+        // --- ID GENERATOR & COPY ---
+        function generateRoomId() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let result = '';
+            for (let i = 0; i < 8; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        function copyRoomId() {
+            const roomId = document.getElementById('room-id').innerText;
+            navigator.clipboard.writeText(roomId).then(() => {
+                const btn = document.getElementById('copy-btn');
+                btn.innerHTML = '<i class="fas fa-check"></i>';
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="fas fa-copy"></i>';
+                }, 2000);
+            });
         }
 
         // --- INITIALIZATION ---
@@ -628,11 +660,13 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Room...';
             btn.disabled = true;
 
-            peer = new Peer(); 
+            const roomId = generateRoomId();
+            peer = new Peer(roomId); 
             
             peer.on('open', function(id) {
                 document.getElementById('lobby-ui').style.display = 'block';
                 document.getElementById('room-id').innerText = id;
+                document.getElementById('copy-btn').style.display = 'inline-block';
                 btn.innerHTML = '<i class="fas fa-satellite-dish"></i> Waiting for opponent...';
             });
 
@@ -659,11 +693,13 @@
                         );
                     }
                 });
+
+                connection.on('close', handleDisconnect);
             });
         }
 
         function joinGame() {
-            const roomId = document.getElementById('join-id').value.trim();
+            let roomId = document.getElementById('join-id').value.trim().toUpperCase();
             if(!roomId) { 
                 showModal("Error", "Please enter a Room ID!", [{ text: "Okay", className: "btn", action: hideModal }]);
                 return; 
@@ -698,6 +734,8 @@
                         );
                     }
                 });
+
+                connection.on('close', handleDisconnect);
 
                 connection.on('error', err => {
                     showModal("Connection Failed", "Could not connect to the room.", [{ text: "Okay", className: "btn", action: hideModal }]);
