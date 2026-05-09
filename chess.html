@@ -20,6 +20,7 @@
             --primary: #2563eb;
             --primary-hover: #1d4ed8;
             --border-color: #e5e7eb;
+            --danger: #ef4444;
             
             /* Premium Chess.com Style Colors */
             --board-light: #ebecd0;
@@ -80,6 +81,7 @@
 
         .btn.outline { background: transparent; color: var(--primary); border: 2px solid var(--primary); }
         .btn.dark { background: #111827; color: white; }
+        .btn.danger { background: var(--danger); color: white; }
         .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
         .btn:disabled { opacity: 0.5; pointer-events: none; }
 
@@ -87,6 +89,26 @@
         .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--border-color); }
         .divider:not(:empty)::before { margin-right: .25em; }
         .divider:not(:empty)::after { margin-left: .25em; }
+
+        /* Custom Modal */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(3px);
+            display: none; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-content {
+            background: var(--bg-card); padding: 30px; border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2); text-align: center; max-width: 400px; width: 90%;
+            animation: modalFadeIn 0.3s ease-out;
+        }
+        @keyframes modalFadeIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-content h2 { margin-bottom: 10px; color: var(--text-main); }
+        .modal-content p { color: var(--text-muted); margin-bottom: 25px; line-height: 1.5; }
+        .modal-actions { display: flex; gap: 10px; justify-content: center; }
+        .modal-actions .btn { margin-bottom: 0; flex: 1; }
 
         /* Game Screen */
         #game-screen { display: none; flex-direction: column; align-items: center; width: 100%; }
@@ -123,16 +145,33 @@
         .square.dark { background-color: var(--board-dark); }
         .square.selected { background-color: var(--highlight); }
 
+        .square.in-check::before {
+            content: '';
+            position: absolute;
+            width: 90%; height: 90%;
+            border: 4px solid #ef4444; border-radius: 50%;
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.7), inset 0 0 12px rgba(239, 68, 68, 0.7);
+            z-index: 1; animation: pulse-check 1.5s infinite ease-in-out; pointer-events: none; 
+        }
+
+        @keyframes pulse-check {
+            0% { transform: scale(0.85); opacity: 0.6; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(0.85); opacity: 0.6; }
+        }
+
         .square.valid-move::after {
-            content: ''; position: absolute; width: 30%; height: 30%; background: rgba(0, 0, 0, 0.15); border-radius: 50%; z-index: 1;
+            content: ''; position: absolute; width: 30%; height: 30%; background: rgba(0, 0, 0, 0.15); border-radius: 50%; z-index: 1; pointer-events: none;
         }
         .square.valid-move:has(.piece)::after {
             width: 85%; height: 85%; background: transparent; border: 6px solid rgba(0, 0, 0, 0.15);
         }
 
         .piece {
-            font-size: clamp(2rem, 9vw, 3.5rem); line-height: 0; transition: transform 0.3s ease; z-index: 2; cursor: grab;
+            font-size: clamp(2rem, 9vw, 3.5rem); line-height: 0; transition: transform 0.3s ease; z-index: 2; cursor: grab; 
         }
+        .piece:active { cursor: grabbing; } 
+        
         .piece.white-piece { color: #ffffff; -webkit-text-stroke: 1.5px #111; text-shadow: 0 3px 4px rgba(0,0,0,0.4); }
         .piece.black-piece { color: #1a1a1a; -webkit-text-stroke: 1px #000; text-shadow: 0 2px 2px rgba(255,255,255,0.2); }
 
@@ -219,10 +258,19 @@
             <div id="chessboard"></div>
             
             <div style="width: 100%; max-width: 500px; display: flex; gap: 10px; margin-top: 15px;">
-                <button class="btn outline" onclick="quitGame()" style="flex: 1; padding: 10px;">
+                <button class="btn outline" onclick="promptResign()" style="flex: 1; padding: 10px;">
                     <i class="fas fa-flag"></i> Resign
                 </button>
             </div>
+        </div>
+    </div>
+
+    <div id="custom-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 id="modal-title">Title</h2>
+            <p id="modal-desc">Description</p>
+            <div class="modal-actions" id="modal-actions">
+                </div>
         </div>
     </div>
 
@@ -238,6 +286,7 @@
         let aiDepth = 2;
         let selectedSquare = null;
         let validMoves = [];
+        let isDragging = false; 
 
         // --- TIMER VARIABLES ---
         let whiteTime = 0;
@@ -257,6 +306,62 @@
         const $modeInd = document.getElementById('mode-indicator');
         const $timers = document.getElementById('timers');
 
+        // --- MODAL LOGIC ---
+        function showModal(title, text, buttons) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-desc').innerText = text;
+            const actionsDiv = document.getElementById('modal-actions');
+            actionsDiv.innerHTML = '';
+            
+            buttons.forEach(btnInfo => {
+                const btn = document.createElement('button');
+                btn.className = btnInfo.className;
+                btn.innerHTML = btnInfo.text; // Allow icons in text
+                btn.onclick = btnInfo.action;
+                actionsDiv.appendChild(btn);
+            });
+            
+            document.getElementById('custom-modal').style.display = 'flex';
+        }
+
+        function hideModal() {
+            document.getElementById('custom-modal').style.display = 'none';
+        }
+
+        function promptResign() {
+            showModal(
+                "Resign Game",
+                "Are you sure you want to resign and return to the menu?",
+                [
+                    { text: "Cancel", className: "btn outline", action: hideModal },
+                    { text: '<i class="fas fa-flag"></i> Yes, Resign', className: "btn danger", action: executeResignation }
+                ]
+            );
+        }
+
+        function executeResignation() {
+            hideModal();
+            // Tell the opponent we resigned
+            if ((currentMode === 'host' || currentMode === 'join') && connection) {
+                connection.send({ type: 'resign' });
+            }
+            returnToMenu();
+        }
+
+        function returnToMenu() {
+            hideModal();
+            if(connection) connection.close();
+            if(peer) { peer.destroy(); peer = null; }
+            stopTimer();
+            
+            document.getElementById('lobby-ui').style.display = 'none';
+            document.getElementById('host-btn').innerHTML = '<i class="fas fa-satellite-dish"></i> Host Game';
+            document.getElementById('host-btn').disabled = false;
+            
+            $game.style.display = 'none';
+            $menu.style.display = 'block';
+        }
+
         // --- INITIALIZATION ---
         function buildBoardDOM() {
             $board.innerHTML = '';
@@ -267,7 +372,11 @@
                     const cell = document.createElement('div');
                     cell.className = `square ${isLight ? 'light' : 'dark'}`;
                     cell.id = squareId;
+                    
                     cell.onclick = () => handleSquareClick(squareId);
+                    cell.ondragover = (e) => e.preventDefault(); 
+                    cell.ondrop = (e) => handleDrop(e, squareId);
+
                     $board.appendChild(cell);
                 }
             }
@@ -282,7 +391,11 @@
                     const piece = boardState[r][c];
                     
                     cell.innerHTML = '';
-                    cell.classList.remove('selected', 'valid-move');
+                    cell.classList.remove('selected', 'valid-move', 'in-check');
+
+                    if (piece && piece.type === 'k' && piece.color === game.turn() && game.in_check()) {
+                        cell.classList.add('in-check');
+                    }
 
                     if (c === 0) {
                         const rankLabel = document.createElement('span');
@@ -298,6 +411,11 @@
                         const span = document.createElement('span');
                         span.innerText = unicodePieces[piece.type];
                         span.className = `piece ${piece.color === 'w' ? 'white-piece' : 'black-piece'}`;
+                        
+                        span.draggable = true;
+                        span.ondragstart = (e) => handleDragStart(e, squareId);
+                        span.ondragend = (e) => handleDragEnd(e);
+
                         cell.appendChild(span);
                     }
                 }
@@ -315,7 +433,7 @@
         }
 
         function updateStatus() {
-            if (isTimeOut) return; // Prevent overwriting timeout status
+            if (isTimeOut) return; 
 
             let moveColor = (game.turn() === 'w') ? 'White' : 'Black';
             let statusHTML = '';
@@ -336,7 +454,6 @@
             }
             $status.innerHTML = statusHTML;
 
-            // Highlight active timer
             if (currentMode === 'host' || currentMode === 'join') {
                 document.getElementById('white-timer').className = game.turn() === 'w' ? 'timer-box active' : 'timer-box inactive';
                 document.getElementById('black-timer').className = game.turn() === 'b' ? 'timer-box active' : 'timer-box inactive';
@@ -391,9 +508,56 @@
             $status.innerHTML = `Game Over - ${winner} wins on time!`;
         }
 
+        // --- DRAG AND DROP LOGIC ---
+        function handleDragStart(e, squareId) {
+            isDragging = true;
+            
+            if (game.game_over() || isTimeOut) { e.preventDefault(); return; }
+            if ((currentMode === 'join' || currentMode === 'host') && game.turn() !== playerColor) { e.preventDefault(); return; }
+            if (currentMode === 'ai' && game.turn() !== playerColor) { e.preventDefault(); return; }
+
+            const pieceOnSquare = game.get(squareId);
+            if (pieceOnSquare && pieceOnSquare.color === game.turn()) {
+                selectedSquare = squareId;
+                validMoves = game.moves({ square: squareId, verbose: true });
+
+                document.querySelectorAll('.selected, .valid-move').forEach(el => {
+                    el.classList.remove('selected', 'valid-move');
+                });
+
+                document.getElementById(squareId).classList.add('selected');
+                validMoves.forEach(move => { 
+                    document.getElementById(move.to).classList.add('valid-move'); 
+                });
+                
+                e.dataTransfer.effectAllowed = 'move';
+            } else {
+                e.preventDefault(); 
+            }
+        }
+
+        function handleDragEnd(e) {
+            setTimeout(() => { isDragging = false; }, 50); 
+            if (selectedSquare) {
+                selectedSquare = null;
+                validMoves = [];
+                renderBoard(); 
+            }
+        }
+
+        function handleDrop(e, targetSquareId) {
+            e.preventDefault();
+            if (selectedSquare) {
+                const moveAttempt = validMoves.find(m => m.to === targetSquareId);
+                if (moveAttempt) {
+                    executeMove({ from: selectedSquare, to: targetSquareId, promotion: 'q' });
+                }
+            }
+        }
+
         // --- INTERACTION LOGIC ---
         function handleSquareClick(squareId) {
-            if (game.game_over() || isTimeOut) return;
+            if (game.game_over() || isTimeOut || isDragging) return; 
 
             if (currentMode === 'join' || currentMode === 'host') {
                 if (game.turn() !== playerColor) return;
@@ -435,7 +599,6 @@
 
             if (currentMode === 'ai' && !game.game_over()) {
                 $status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI is thinking...';
-                // Give the AI a brief delay so the "Thinking" UI has time to render
                 setTimeout(makeAIMove, 400); 
             }
         }
@@ -449,7 +612,7 @@
             game.reset();
             isTimeOut = false;
             stopTimer();
-            $timers.style.display = 'none'; // No timer in AI mode
+            $timers.style.display = 'none'; 
             
             $menu.style.display = 'none';
             $game.style.display = 'flex';
@@ -457,21 +620,6 @@
             
             buildBoardDOM();
             renderBoard();
-        }
-
-        function quitGame() {
-            if (confirm("Resign and return to menu?")) {
-                if(connection) connection.close();
-                if(peer) { peer.destroy(); peer = null; }
-                stopTimer();
-                
-                document.getElementById('lobby-ui').style.display = 'none';
-                document.getElementById('host-btn').innerHTML = '<i class="fas fa-satellite-dish"></i> Host Game';
-                document.getElementById('host-btn').disabled = false;
-                
-                $game.style.display = 'none';
-                $menu.style.display = 'block';
-            }
         }
 
         // --- MULTIPLAYER LOGIC (PeerJS) ---
@@ -491,7 +639,6 @@
             peer.on('connection', function(conn) {
                 connection = conn;
                 
-                // When player joins, send them the timer settings
                 connection.on('open', function() {
                     const selectedTime = parseInt(document.getElementById('mp-timer').value);
                     connection.send({ type: 'init', time: selectedTime });
@@ -503,13 +650,24 @@
                         game.move(data.move);
                         selectedSquare = null; validMoves = []; renderBoard();
                     }
+                    if (data.type === 'resign') {
+                        stopTimer();
+                        showModal(
+                            "You Win! \uD83C\uDFC6",
+                            "Your opponent has resigned the match.",
+                            [{ text: "Return to Menu", className: "btn", action: returnToMenu }]
+                        );
+                    }
                 });
             });
         }
 
         function joinGame() {
             const roomId = document.getElementById('join-id').value.trim();
-            if(!roomId) { alert("Please enter a Room ID!"); return; }
+            if(!roomId) { 
+                showModal("Error", "Please enter a Room ID!", [{ text: "Okay", className: "btn", action: hideModal }]);
+                return; 
+            }
 
             const btn = document.getElementById('join-btn');
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting...';
@@ -520,7 +678,6 @@
                 connection = peer.connect(roomId);
                 
                 connection.on('open', function() {
-                    // Waiting for the host to send the game settings (time)
                     $status.innerText = "Syncing settings with host...";
                 });
 
@@ -532,10 +689,18 @@
                         game.move(data.move);
                         selectedSquare = null; validMoves = []; renderBoard();
                     }
+                    if (data.type === 'resign') {
+                        stopTimer();
+                        showModal(
+                            "You Win! \uD83C\uDFC6",
+                            "Your opponent has resigned the match.",
+                            [{ text: "Return to Menu", className: "btn", action: returnToMenu }]
+                        );
+                    }
                 });
 
                 connection.on('error', err => {
-                    alert("Connection failed.");
+                    showModal("Connection Failed", "Could not connect to the room.", [{ text: "Okay", className: "btn", action: hideModal }]);
                     btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Join Game';
                     btn.disabled = false;
                 });
