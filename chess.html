@@ -31,7 +31,12 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
 
         body {
-            background-color: var(--bg-color);
+            /* NEW: Modern dark glowing background */
+            background-color: #0f172a;
+            background-image: 
+                radial-gradient(at 40% 20%, hsla(228,100%,74%,0.15) 0px, transparent 50%),
+                radial-gradient(at 80% 0%, hsla(189,100%,56%,0.15) 0px, transparent 50%),
+                radial-gradient(at 0% 50%, hsla(355,100%,93%,0.1) 0px, transparent 50%);
             color: var(--text-main);
             min-height: 100vh;
             display: flex;
@@ -57,7 +62,7 @@
         /* Menu Screens */
         .menu-screen {
             background: var(--bg-card); padding: 40px; border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid var(--border-color);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3); border: 1px solid var(--border-color);
             text-align: center; max-width: 450px; width: 100%;
         }
 
@@ -79,7 +84,7 @@
             cursor: pointer; transition: all 0.2s; margin-bottom: 10px;
         }
 
-        .btn.outline { background: transparent; color: var(--primary); border: 2px solid var(--primary); }
+        .btn.outline { background: var(--bg-card); color: var(--primary); border: 2px solid var(--primary); }
         .btn.dark { background: #111827; color: white; }
         .btn.danger { background: var(--danger); color: white; }
         .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
@@ -93,7 +98,7 @@
         /* Custom Modal */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); backdrop-filter: blur(3px);
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
             display: none; justify-content: center; align-items: center; z-index: 1000;
         }
         .modal-content {
@@ -116,7 +121,7 @@
         .status-bar {
             width: 100%; max-width: 500px; display: flex; justify-content: space-between;
             align-items: center; margin-bottom: 15px; padding: 15px; background: var(--bg-card);
-            border-radius: 8px; border: 1px solid var(--border-color); box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            border-radius: 8px; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
 
         .status-left { display: flex; flex-direction: column; gap: 5px; }
@@ -136,7 +141,7 @@
             grid-template-rows: repeat(8, minmax(0, 1fr)); 
             width: 100%; max-width: 500px; aspect-ratio: 1 / 1;
             border: 4px solid #403d39; border-radius: 6px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.2); user-select: none;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4); user-select: none;
             transition: transform 0.5s ease; background: #403d39; overflow: hidden;
         }
 
@@ -300,7 +305,7 @@
         let selectedSquare = null;
         let validMoves = [];
         let isDragging = false; 
-        let matchEnded = false; // NEW: Prevents disconnect errors when game ends naturally
+        let matchEnded = false; 
 
         // --- TIMER VARIABLES ---
         let whiteTime = 0;
@@ -347,13 +352,12 @@
 
         function executeResignation() {
             hideModal();
-            matchEnded = true; // Lock state so disconnect modal doesn't fire
+            matchEnded = true; 
             
             if ((currentMode === 'host' || currentMode === 'join') && connection) {
                 connection.send({ type: 'resign' });
             }
             
-            // Show the losing modal to the player who resigned
             stopTimer();
             showModal(
                 "You Resigned",
@@ -362,23 +366,30 @@
             );
         }
 
+        // --- FIXED: returnToMenu now properly resets both Join and Host buttons ---
         function returnToMenu() {
             hideModal();
             if(connection) connection.close();
             if(peer) { peer.destroy(); peer = null; }
             stopTimer();
             
+            // Reset Host Area
             document.getElementById('lobby-ui').style.display = 'none';
             document.getElementById('host-btn').innerHTML = '<i class="fas fa-satellite-dish"></i> Host Game';
             document.getElementById('host-btn').disabled = false;
             document.getElementById('copy-btn').style.display = 'none';
+
+            // Reset Join Area
+            const joinBtn = document.getElementById('join-btn');
+            joinBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Join Game';
+            joinBtn.disabled = false;
+            document.getElementById('join-id').value = '';
             
             $game.style.display = 'none';
             $menu.style.display = 'block';
         }
 
         function handleDisconnect() {
-            // Only show disconnect error if the game didn't officially end yet
             if (!matchEnded && $game.style.display === 'flex' && !game.game_over() && !isTimeOut) {
                 matchEnded = true; 
                 stopTimer();
@@ -712,7 +723,7 @@
                         selectedSquare = null; validMoves = []; renderBoard();
                     }
                     if (data.type === 'resign') {
-                        matchEnded = true; // Lock state 
+                        matchEnded = true; 
                         stopTimer();
                         showModal(
                             "You Win! \uD83C\uDFC6",
@@ -754,7 +765,7 @@
                         selectedSquare = null; validMoves = []; renderBoard();
                     }
                     if (data.type === 'resign') {
-                        matchEnded = true; // Lock state
+                        matchEnded = true; 
                         stopTimer();
                         showModal(
                             "You Win! \uD83C\uDFC6",
@@ -768,6 +779,8 @@
 
                 connection.on('error', err => {
                     showModal("Connection Failed", "Could not connect to the room.", [{ text: "Okay", className: "btn", action: hideModal }]);
+                    
+                    // Reset the join button state manually on error
                     btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Join Game';
                     btn.disabled = false;
                 });
