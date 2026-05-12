@@ -13,6 +13,8 @@
             --header-bg: #ffffff;
             --text-main: #111827;
             --primary: #2563eb;
+            --hint-source: #facc15;
+            --hint-target: #22c55e;
         }
 
         * {
@@ -85,10 +87,17 @@
 
         .game-controls select:hover { background: #e5e7eb; }
         .game-controls button:hover { background: #1d4ed8; }
+        
+        .btn-hint {
+            background: #f59e0b !important;
+        }
+        .btn-hint:hover {
+            background: #d97706 !important;
+        }
 
         #game-board {
             width: 100%;
-            max-width: 1000px;
+            max-width: 850px; 
             margin: 30px auto;
             flex-grow: 1;
             position: relative;
@@ -97,7 +106,7 @@
         .slot {
             position: absolute;
             border: 2px dashed rgba(255, 255, 255, 0.3);
-            border-radius: 8px;
+            border-radius: 6px;
             background: rgba(0, 0, 0, 0.1);
             box-sizing: border-box;
             z-index: 1;
@@ -106,12 +115,12 @@
         #slot-stock::after {
             content: '↺';
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            font-size: 30px; color: rgba(255, 255, 255, 0.4);
+            font-size: 26px; color: rgba(255, 255, 255, 0.4);
         }
 
         .f-slot::after {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            font-size: 40px; color: rgba(255, 255, 255, 0.2);
+            font-size: 35px; color: rgba(255, 255, 255, 0.2);
         }
         #slot-f0::after { content: '♠'; }
         #slot-f1::after { content: '♥'; }
@@ -121,16 +130,16 @@
         .card {
             position: absolute;
             top: 0; left: 0;
-            border-radius: 8px;
+            border-radius: 6px; 
             background-color: white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
             cursor: grab;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 6px;
+            padding: 5px; 
             font-weight: 700;
-            font-size: 22px;
+            font-size: 18px; 
             z-index: 10;
             transition: transform 0.25s ease-out, box-shadow 0.2s;
         }
@@ -147,7 +156,7 @@
 
         .card-top { display: flex; flex-direction: column; align-items: flex-start; line-height: 1; pointer-events: none;}
         .card-bottom { display: flex; flex-direction: column; align-items: flex-end; line-height: 1; transform: rotate(180deg); pointer-events: none;}
-        .card-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 45px; opacity: 0.15; pointer-events: none;}
+        .card-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 35px; opacity: 0.15; pointer-events: none;}
 
         .card.face-down {
             background: linear-gradient(135deg, #1e3a8a 25%, transparent 25%) -10px 0,
@@ -156,13 +165,28 @@
                         linear-gradient(45deg, #1e3a8a 25%, transparent 25%);
             background-size: 20px 20px;
             background-color: #2563eb;
-            border: 4px solid white;
+            border: 3px solid white; 
             cursor: pointer;
         }
 
         .card.face-down .card-top, 
         .card.face-down .card-bottom, 
         .card.face-down .card-center { display: none; }
+
+        .hint-active {
+            box-shadow: 0 0 15px 5px var(--hint-source) !important;
+            border-color: var(--hint-source) !important;
+            z-index: 6000 !important;
+            transition: all 0.3s ease !important;
+        }
+
+        /* The class applied to valid drop zones when dragging */
+        .hint-target {
+            box-shadow: 0 0 25px 8px var(--hint-target) !important;
+            border-color: var(--hint-target) !important;
+            z-index: 5000 !important;
+            transition: all 0.3s ease !important;
+        }
 
         #win-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -176,19 +200,19 @@
         #win-screen button:hover { background: #f59e0b; }
 
         @media (max-width: 600px) {
-            .card { font-size: 16px; padding: 3px; border-radius: 4px; }
-            .card-center { font-size: 28px; }
+            .card { font-size: 14px; padding: 3px; border-radius: 4px; }
+            .card-center { font-size: 24px; }
             .slot { border-radius: 4px; }
             .game-controls { gap: 5px; }
             .game-controls select, .game-controls button { padding: 6px 10px; font-size: 0.8rem; }
-            .back-btn span { display: none; } /* Hide "Back to Portal" text on very small screens, just show icon */
+            .back-btn span { display: none; } 
         }
     </style>
 </head>
 <body>
 
     <header>
-        <a href="portal.html" class="back-btn">
+        <a href="index.html" class="back-btn">
             <i class="fas fa-arrow-left"></i> <span>Back to Portal</span>
         </a>
         <div class="game-controls">
@@ -196,6 +220,7 @@
                 <option value="1">Easy (Draw 1)</option>
                 <option value="3">Hard (Draw 3)</option>
             </select>
+            <button class="btn-hint" onclick="showHint()">Hint</button>
             <button onclick="initGame()">Restart</button>
         </div>
     </header>
@@ -252,7 +277,7 @@
             
             if (bw === 0) return false;
 
-            cw = bw / 7.5; 
+            cw = bw / 9.5; 
             gap = (bw - (cw * 7)) / 6;
             colStep = cw + gap;
             ch = cw * 1.45;
@@ -342,7 +367,6 @@
 
             state.waste.forEach((card, i) => {
                 updateCardVisuals(card, 'waste', i);
-                // Stack perfectly directly on top so only top card is seen
                 card.el.style.transform = `translate(${colStep}px, 0px)`;
                 card.el.style.zIndex = zIndexCounter++;
             });
@@ -386,11 +410,9 @@
         }
 
         function drawStock() {
-            // Read difficulty level from the dropdown!
             let drawRule = parseInt(document.getElementById('difficulty').value);
 
             if (state.stock.length > 0) {
-                // Draw based on the selected difficulty (1 or 3)
                 let drawCount = Math.min(drawRule, state.stock.length);
                 for(let i=0; i < drawCount; i++){
                     const card = state.stock.pop();
@@ -432,6 +454,88 @@
             }
         }
 
+        // Button Hint Logic
+        function showHint() {
+            clearDropZoneHighlights();
+            document.querySelectorAll('.hint-active').forEach(el => el.classList.remove('hint-active'));
+
+            const flashCards = (cards, targetPileId) => {
+                cards.forEach(c => c.el.classList.add('hint-active'));
+                
+                let targetSlot = document.getElementById('slot-' + targetPileId);
+                let targetTopCard = state[targetPileId].length > 0 ? state[targetPileId][state[targetPileId].length - 1].el : null;
+                let targetEl = targetTopCard || targetSlot;
+                
+                if(targetEl) targetEl.classList.add('hint-target');
+
+                setTimeout(() => {
+                    cards.forEach(c => c.el.classList.remove('hint-active'));
+                    if(targetEl) targetEl.classList.remove('hint-target');
+                }, 1800); 
+            };
+
+            if (state.waste.length > 0) {
+                let card = state.waste[state.waste.length - 1];
+                for(let i=0; i<4; i++) {
+                    if (isValidMove('waste', 'f'+i, [card])) return flashCards([card], 'f'+i);
+                }
+                for(let i=0; i<7; i++) {
+                    if (isValidMove('waste', 't'+i, [card])) return flashCards([card], 't'+i);
+                }
+            }
+
+            for(let i=0; i<7; i++) {
+                let pile = state['t'+i];
+                if (pile.length === 0) continue;
+
+                let topCard = pile[pile.length - 1];
+                
+                for(let f=0; f<4; f++) {
+                    if (isValidMove('t'+i, 'f'+f, [topCard])) return flashCards([topCard], 'f'+f);
+                }
+
+                let firstFaceUpIdx = pile.findIndex(c => c.faceUp);
+                if (firstFaceUpIdx !== -1) {
+                    for (let j = firstFaceUpIdx; j < pile.length; j++) {
+                        let seq = pile.slice(j);
+                        
+                        if (j === 0 && seq[0].value === 13) continue;
+
+                        for(let t=0; t<7; t++) {
+                            if (i === t) continue;
+                            if (isValidMove('t'+i, 't'+t, seq)) return flashCards(seq, 't'+t);
+                        }
+                    }
+                }
+            }
+
+            let stockSlot = document.getElementById('slot-stock');
+            stockSlot.classList.add('hint-active');
+            setTimeout(() => stockSlot.classList.remove('hint-active'), 1500);
+        }
+
+        // --- NEW DRAG HINT FUNCTIONS ---
+        function highlightValidDropZones(cards, originPile) {
+            const allPiles = ['f0', 'f1', 'f2', 'f3', 't0', 't1', 't2', 't3', 't4', 't5', 't6'];
+            
+            allPiles.forEach(targetPileId => {
+                // Ignore the pile it came from and check if the move is legal
+                if (targetPileId !== originPile && isValidMove(originPile, targetPileId, cards)) {
+                    // Find the exact DOM element to highlight (top card, or empty slot)
+                    let targetSlot = document.getElementById('slot-' + targetPileId);
+                    let targetTopCard = state[targetPileId].length > 0 ? state[targetPileId][state[targetPileId].length - 1].el : null;
+                    let targetEl = targetTopCard || targetSlot;
+                    
+                    if (targetEl) targetEl.classList.add('hint-target');
+                }
+            });
+        }
+
+        function clearDropZoneHighlights() {
+            document.querySelectorAll('.hint-target').forEach(el => el.classList.remove('hint-target'));
+        }
+        // -------------------------------
+
         let isDragging = false;
         let dragOrigin = null;
         let draggedCards = [];
@@ -458,6 +562,9 @@
             dragOrigin = pileId;
             draggedCards = state[pileId].splice(index);
 
+            // Trigger the drag hints!
+            highlightValidDropZones(draggedCards, dragOrigin);
+
             const boardRect = document.getElementById('game-board').getBoundingClientRect();
             const cardRect = cardEl.getBoundingClientRect();
             
@@ -466,7 +573,7 @@
 
             draggedCards.forEach((card, i) => {
                 card.el.classList.add('dragging');
-                card.el.style.zIndex = 5000 + i;
+                card.el.style.zIndex = 7000 + i; // Ensured dragging card is always on top of hints
                 let mouseX = e.clientX - boardRect.left - dragOffsetX;
                 let mouseY = e.clientY - boardRect.top - dragOffsetY;
                 card.el.style.transform = `translate(${mouseX}px, ${mouseY + (i * (ch*0.28))}px)`;
@@ -487,6 +594,9 @@
         document.addEventListener('pointerup', e => {
             if (!isDragging) return;
             isDragging = false;
+
+            // Remove the hints upon drop
+            clearDropZoneHighlights();
 
             draggedCards.forEach(card => card.el.classList.remove('dragging'));
 
