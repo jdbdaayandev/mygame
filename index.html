@@ -9,15 +9,20 @@
     
     <style>
         :root {
-            /* Standard, clean color palette */
             --bg-color: #f3f4f6;
             --bg-card: #ffffff;
             --text-main: #111827;
             --text-muted: #6b7280;
-            --primary: #2563eb; /* Standard web blue */
+            --primary: #2563eb; 
             --primary-hover: #1d4ed8;
             --border-color: #e5e7eb;
             --transition: all 0.2s ease;
+            
+            /* Tag Colors */
+            --tag-sp-bg: #e0e7ff;
+            --tag-sp-text: #4338ca;
+            --tag-mp-bg: #dcfce7;
+            --tag-mp-text: #15803d;
         }
 
         * {
@@ -36,7 +41,6 @@
             flex-direction: column;
         }
 
-        /* Header / Navbar */
         header {
             background: var(--bg-card);
             border-bottom: 1px solid var(--border-color);
@@ -85,7 +89,6 @@
             color: var(--primary);
         }
 
-        /* Hero Section */
         .hero {
             text-align: center;
             padding: 60px 20px 40px;
@@ -106,7 +109,6 @@
             color: var(--text-muted);
         }
 
-        /* Game Grid */
         .portal-container {
             max-width: 1200px;
             margin: 0 auto;
@@ -116,26 +118,25 @@
 
         .game-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 25px;
             margin-top: 30px;
         }
 
-        /* Game Card */
         .game-card {
             background: var(--bg-card);
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: hidden;
             border: 1px solid var(--border-color);
             transition: var(--transition);
             display: flex;
             flex-direction: column;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
         }
 
         .game-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 12px 20px rgba(0,0,0,0.1);
+            box-shadow: 0 12px 25px rgba(0,0,0,0.1);
         }
 
         .card-image {
@@ -145,34 +146,60 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 3.5rem;
+            font-size: 4rem;
             color: #d1d5db;
             transition: var(--transition);
         }
 
         .game-card:hover .card-image {
             color: var(--primary);
-            background: #f0fdf4; /* Slight tint on hover */
+            background: #f0fdf4; 
+        }
+
+        /* Snakes and Ladders gets a special neon hover state */
+        .card-snakes:hover .card-image {
+            color: #8b5cf6;
+            background: #f5f3ff;
         }
 
         .card-content {
-            padding: 20px;
+            padding: 25px;
             display: flex;
             flex-direction: column;
             flex-grow: 1;
         }
 
+        /* Tags for Single/Multiplayer */
+        .game-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .tag {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tag-sp { background: var(--tag-sp-bg); color: var(--tag-sp-text); }
+        .tag-mp { background: var(--tag-mp-bg); color: var(--tag-mp-text); }
+
         .card-title {
-            font-size: 1.25rem;
+            font-size: 1.3rem;
             color: var(--text-main);
-            margin-bottom: 8px;
-            font-weight: 600;
+            margin-bottom: 10px;
+            font-weight: 700;
         }
 
         .card-desc {
             font-size: 0.95rem;
             color: var(--text-muted);
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             flex-grow: 1;
         }
 
@@ -181,9 +208,9 @@
             text-align: center;
             background: var(--primary);
             color: #ffffff;
-            padding: 10px 20px;
-            border-radius: 6px;
-            font-weight: 500;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
             text-decoration: none;
             transition: var(--transition);
         }
@@ -192,7 +219,6 @@
             background: var(--primary-hover);
         }
 
-        /* Footer */
         footer {
             text-align: center;
             padding: 25px 20px;
@@ -202,7 +228,6 @@
             color: var(--text-muted);
         }
 
-        /* Mobile Adjustments */
         @media (max-width: 768px) {
             .hero h1 { font-size: 2rem; }
             .nav-links { display: none; }
@@ -235,8 +260,11 @@
                     <i class="fas fa-spade"></i>
                 </div>
                 <div class="card-content">
+                    <div class="game-tags">
+                        <span class="tag tag-sp"><i class="fas fa-user"></i> Single Player</span>
+                    </div>
                     <h3 class="card-title">Klondike Solitaire</h3>
-                    <p class="card-desc">The classic card game featuring smooth drag-and-drop mechanics, Draw 3 rules, and smart auto-play.</p>
+                    <p class="card-desc">The classic card game featuring smooth drag-and-drop mechanics, a credit system, leveling, and an unlockable skin shop!</p>
                     <a href="solitaire.html" class="play-btn">Play Now</a>
                 </div>
             </div>
@@ -246,6 +274,10 @@
                     <i class="fas fa-chess-knight"></i>
                 </div>
                 <div class="card-content">
+                    <div class="game-tags">
+                        <span class="tag tag-sp"><i class="fas fa-robot"></i> VS CPU</span>
+                        <span class="tag tag-mp"><i class="fas fa-wifi"></i> Multiplayer</span>
+                    </div>
                     <h3 class="card-title">Chess</h3>
                     <p class="card-desc">Play a classic game of Chess. Challenge the built-in AI opponent or host a peer-to-peer multiplayer match with a friend!</p>
                     <a href="chess.html" class="play-btn">Play Now</a>
@@ -254,9 +286,42 @@
 
             <div class="game-card">
                 <div class="card-image">
+                    <i class="fas fa-chess-board"></i>
+                </div>
+                <div class="card-content">
+                    <div class="game-tags">
+                        <span class="tag tag-sp"><i class="fas fa-robot"></i> VS CPU</span>
+                        <span class="tag tag-mp"><i class="fas fa-wifi"></i> Multiplayer</span>
+                    </div>
+                    <h3 class="card-title">Dama Premium</h3>
+                    <p class="card-desc">Play premium Checkers with 3D tactile pieces. Challenge the built-in AI or host a seamless peer-to-peer multiplayer match with a friend!</p>
+                    <a href="dama.html" class="play-btn">Play Now</a>
+                </div>
+            </div>
+
+            <div class="game-card card-snakes">
+                <div class="card-image">
+                    <i class="fas fa-dice"></i>
+                </div>
+                <div class="card-content">
+                    <div class="game-tags">
+                        <span class="tag tag-sp"><i class="fas fa-robot"></i> VS CPU</span>
+                        <span class="tag tag-mp"><i class="fas fa-wifi"></i> Multiplayer</span>
+                    </div>
+                    <h3 class="card-title">Snakes & Ladders Arcade</h3>
+                    <p class="card-desc">Experience the classic board game in a neon-lit, glassmorphism arcade style with bouncing pieces and glowing graphics.</p>
+                    <a href="snakes.html" class="play-btn" style="background: #8b5cf6;">Play Now</a>
+                </div>
+            </div>
+
+            <div class="game-card">
+                <div class="card-image">
                     <i class="fas fa-puzzle-piece"></i>
                 </div>
                 <div class="card-content">
+                    <div class="game-tags">
+                        <span class="tag tag-sp"><i class="fas fa-user"></i> Single Player</span>
+                    </div>
                     <h3 class="card-title">Puzzle Blocks</h3>
                     <p class="card-desc">Arrange falling blocks to clear lines. A classic test of spatial awareness and quick thinking.</p>
                     <a href="blocks.html" class="play-btn">Play Now</a>
@@ -265,12 +330,16 @@
 
             <div class="game-card">
                 <div class="card-image">
-                    <i class="fas fa-dice"></i>
+                    <i class="fas fa-dice-d20"></i>
                 </div>
                 <div class="card-content">
-                    <h3 class="card-title">Yahtzee</h3>
-                    <p class="card-desc">Roll the dice and score combinations in this classic board game translated for the web.</p>
-                    <a href="#" class="play-btn" style="background: var(--text-muted);" onclick="alert('Coming soon!')">Coming Soon</a>
+                    <div class="game-tags">
+                        <span class="tag tag-sp"><i class="fas fa-user-friends"></i> Local MP</span>
+                        <span class="tag tag-mp"><i class="fas fa-wifi"></i> Online MP</span>
+                    </div>
+                    <h3 class="card-title">Yahtzee Premium</h3>
+                    <p class="card-desc">Roll the dice, lock in your favorites, and score big combinations in this multiplayer tabletop classic.</p>
+                    <a href="yahtzee.html" class="play-btn" style="background: #10b981;">Play Now</a>
                 </div>
             </div>
 

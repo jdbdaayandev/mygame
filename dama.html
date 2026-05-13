@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jdbd Games | Dama Premium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #1a3627; 
+            --header-bg: rgba(255, 255, 255, 0.95);
+            --text-main: #111827;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --board-dark: #633a21;
+            --board-light: #e6c28a;
+            --board-border: #3b2212;
+            --highlight: rgba(250, 204, 21, 0.3);
+            --selected: rgba(34, 197, 94, 0.4);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(rgba(255, 255, 255, 0.03) 2px, transparent 2px),
+                radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 30px 30px, 15px 15px;
+            background-position: 0 0, 15px 15px;
+            color: var(--text-main);
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+            user-select: none;
+            overflow-x: hidden;
+        }
+
+        header {
+            background: var(--header-bg); padding: 15px 25px; width: 100%;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .back-btn { text-decoration: none; color: var(--text-main); font-weight: 700; display: flex; align-items: center; gap: 8px; font-size: 1.1rem; transition: 0.2s;}
+        .back-btn:hover { color: var(--primary); transform: translateX(-3px); }
+
+        .game-status { font-family: 'Poppins', sans-serif; font-weight: 800; font-size: 1.1rem; padding: 8px 20px; background: #f3f4f6; border-radius: 20px; border: 2px solid #e5e7eb; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); color: #374151;}
+        
+        .controls button {
+            background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+        }
+        .controls button:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 6px 12px rgba(37, 99, 235, 0.3); }
+
+        #board-container { 
+            margin-top: 50px; display: none; 
+            padding: 15px; background: var(--board-border); border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6), inset 0 2px 5px rgba(255,255,255,0.1);
+        }
+
+        .board {
+            display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr);
+            width: 85vw; max-width: 550px; height: 85vw; max-height: 550px;
+            border: 4px solid #2a180c; border-radius: 4px;
+            background: #2a180c; gap: 1px;
+        }
+
+        .square { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; position: relative; transition: background-color 0.2s; }
+        .square.dark { background-color: var(--board-dark); box-shadow: inset 0 0 15px rgba(0,0,0,0.3); }
+        .square.light { background-color: var(--board-light); box-shadow: inset 0 0 15px rgba(255,255,255,0.2); }
+        
+        .square.highlight { cursor: pointer; animation: pulseHighlight 1.5s infinite; }
+        .square.selected { background-color: var(--selected); box-shadow: inset 0 0 20px rgba(0,0,0,0.4); }
+
+        @keyframes pulseHighlight {
+            0% { box-shadow: inset 0 0 0 4px rgba(250, 204, 21, 0.4); background-color: rgba(250, 204, 21, 0.1); }
+            50% { box-shadow: inset 0 0 0 8px rgba(250, 204, 21, 0.8); background-color: rgba(250, 204, 21, 0.3); }
+            100% { box-shadow: inset 0 0 0 4px rgba(250, 204, 21, 0.4); background-color: rgba(250, 204, 21, 0.1); }
+        }
+
+        .piece {
+            width: 75%; height: 75%; border-radius: 50%; 
+            display: flex; justify-content: center; align-items: center; z-index: 10; cursor: pointer;
+            transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+        
+        .piece:hover { transform: scale(1.05); }
+        .piece:active { transform: scale(0.95); }
+
+        .piece.red { 
+            background: radial-gradient(circle at 35% 35%, #ff5252 0%, #dc2626 50%, #991b1b 100%);
+            box-shadow: inset 0 2px 4px rgba(255,255,255,0.4), inset 0 -2px 4px rgba(0,0,0,0.4), 0 4px 0 #7f1d1d, 0 6px 10px rgba(0,0,0,0.5);
+            border: 1px solid #7f1d1d;
+        }
+        
+        .piece.black { 
+            background: radial-gradient(circle at 35% 35%, #6b7280 0%, #374151 50%, #111827 100%);
+            box-shadow: inset 0 2px 4px rgba(255,255,255,0.2), inset 0 -2px 4px rgba(0,0,0,0.6), 0 4px 0 #000000, 0 6px 10px rgba(0,0,0,0.6);
+            border: 1px solid #000;
+        }
+        
+        .piece i { display: none; font-size: 1.4rem; color: #fbbf24; text-shadow: 0 2px 4px rgba(0,0,0,0.6); filter: drop-shadow(0 0 2px rgba(251, 191, 36, 0.5));}
+        .piece.king i { display: block; animation: crownShine 2s infinite alternate;}
+
+        @keyframes crownShine {
+            0% { filter: drop-shadow(0 0 2px rgba(251, 191, 36, 0.4)); transform: scale(0.95); }
+            100% { filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.9)); transform: scale(1.05); }
+        }
+
+        .piece.just-moved { animation: dropIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        @keyframes dropIn {
+            0% { transform: scale(1.3) translateY(-20px); opacity: 0; box-shadow: 0 20px 20px rgba(0,0,0,0.2); }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 2000;
+            opacity: 1; transition: opacity 0.3s;
+        }
+        .modal-overlay.hidden { opacity: 0; pointer-events: none; }
+        
+        .modal-content {
+            background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 420px; text-align: center; color: var(--text-main);
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            transform: scale(1); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-height: 90vh; overflow-y: auto;
+        }
+        .modal-overlay.hidden .modal-content { transform: scale(0.8); }
+
+        .modal-content h2 { font-family: 'Poppins', sans-serif; font-size: 1.8rem; margin-bottom: 20px; color: #1f2937; }
+        .modal-content button.primary-btn {
+            width: 100%; padding: 14px; margin-bottom: 10px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: 0.2s;
+            display: flex; justify-content: center; align-items: center; gap: 10px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+        }
+        .modal-content button.primary-btn:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 6px 12px rgba(37, 99, 235, 0.3); }
+        .modal-content button.btn-secondary { background: #f3f4f6; color: #374151; box-shadow: none; border: 2px solid #e5e7eb; width: 100%; padding: 14px; border-radius: 10px; font-weight: bold; cursor: pointer;}
+        
+        input[type="text"] { width: 100%; padding: 15px; margin-bottom: 20px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 1.1rem; text-align: center; font-family: monospace; background: #f9fafb; outline: none; }
+        .token-box { background: #f3f4f6; padding: 15px; border-radius: 10px; font-family: monospace; font-size: 1.3rem; margin-bottom: 20px; word-break: break-all; border: 2px dashed #cbd5e1; color: var(--primary); font-weight: bold;}
+
+        /* Rules UI */
+        .rules-container { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: left; }
+        .rules-container h3 { font-size: 1rem; color: #475569; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; }
+        .rule-toggle { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 0.95rem; font-weight: 600; color: #1e293b; }
+        
+        /* Custom Toggle Switch */
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        input:checked + .slider { background-color: #10b981; }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="#" class="back-btn" onclick="location.reload()"><i class="fas fa-chevron-left"></i> Menu</a>
+        <div class="game-status" id="status-text">Ready to play</div>
+        <div class="controls"><button onclick="location.reload()"><i class="fas fa-redo-alt"></i> Restart</button></div>
+    </header>
+
+    <div id="menu-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Dama / Checkers</h2>
+            
+            <div class="rules-container">
+                <h3><i class="fas fa-cogs"></i> Game Rules</h3>
+                <div class="rule-toggle">
+                    <span>Normal Eat Backward</span>
+                    <label class="switch">
+                        <input type="checkbox" id="rule-normal-back">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="rule-toggle">
+                    <span>Kings Can Multi-Jump</span>
+                    <label class="switch">
+                        <input type="checkbox" id="rule-king-multi" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <p style="font-size: 0.75rem; color: #64748b; margin-top: 5px; line-height: 1.2;">*Host dictates the rules for Multiplayer.</p>
+            </div>
+
+            <button class="primary-btn" onclick="startGame('cpu')"><i class="fas fa-robot"></i> VS Computer</button>
+            <button class="primary-btn" onclick="showHostMenu()"><i class="fas fa-wifi"></i> Create Token (Host)</button>
+            <button class="primary-btn" style="background: #8b5cf6;" onclick="showJoinMenu()"><i class="fas fa-sign-in-alt"></i> Join Token (Client)</button>
+        </div>
+    </div>
+
+    <div id="host-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2>Your Game Token</h2>
+            <p style="margin-bottom: 15px; font-size: 0.95rem; color: #4b5563;">Send this code to your friend so they can join.</p>
+            <div class="token-box" id="host-token">Generating...</div>
+            <button class="primary-btn" onclick="copyToken()"><i class="far fa-copy"></i> Copy Token</button>
+            <p id="host-status" style="margin-top: 15px; color: #d97706; font-weight: 700; font-size: 0.9rem;"><i class="fas fa-circle-notch fa-spin"></i> Waiting for opponent...</p>
+            <button class="btn-secondary" onclick="location.reload()" style="margin-top: 15px;">Cancel</button>
+        </div>
+    </div>
+
+    <div id="join-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2>Join Game</h2>
+            <p style="margin-bottom: 15px; font-size: 0.95rem; color: #4b5563;">Enter the token provided by the host.</p>
+            <input type="text" id="join-token-input" placeholder="Paste Token Here">
+            <button class="primary-btn" onclick="joinGame()"><i class="fas fa-play"></i> Connect & Play</button>
+            <button class="btn-secondary" onclick="location.reload()">Cancel</button>
+        </div>
+    </div>
+
+    <div id="win-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 id="win-text" style="font-size: 2.5rem; margin-bottom: 10px;">Red Wins!</h2>
+            <p style="margin-bottom: 25px; color: #6b7280; font-weight: 600;">Great game!</p>
+            <button class="primary-btn" onclick="location.reload()"><i class="fas fa-redo"></i> Play Again</button>
+        </div>
+    </div>
+
+    <div id="board-container">
+        <div class="board" id="board"></div>
+    </div>
+
+    <script>
+        // --- GAME SETTINGS / RULES ---
+        let gameRules = {
+            normalEatBackward: false,
+            kingMultiJump: true
+        };
+
+        function updateRulesFromUI() {
+            gameRules.normalEatBackward = document.getElementById('rule-normal-back').checked;
+            gameRules.kingMultiJump = document.getElementById('rule-king-multi').checked;
+        }
+
+        // --- GAME STATE ---
+        const EMPTY = 0, RED = 1, RED_KING = 2, BLACK = 3, BLACK_KING = 4;
+        let board = [];
+        let currentPlayer = RED; 
+        let selectedSquare = null;
+        let validMoves = [];
+        let mandatoryJumpSquare = null; 
+        
+        let gameMode = ''; 
+        let myColor = RED; 
+        let lastMoveTarget = null; 
+
+        // --- MULTIPLAYER P2P (PeerJS) ---
+        let peer = null;
+        let conn = null;
+
+        function showHostMenu() {
+            updateRulesFromUI(); // Apply host rules
+
+            document.getElementById('menu-modal').classList.add('hidden');
+            document.getElementById('host-modal').classList.remove('hidden');
+            
+            peer = new Peer();
+            peer.on('open', id => { document.getElementById('host-token').innerText = id; });
+            
+            peer.on('connection', connection => {
+                conn = connection;
+                conn.on('open', () => {
+                    // Send rules to the joining player immediately
+                    conn.send({ type: 'sync_rules', rules: gameRules });
+                    setupConnection();
+                    document.getElementById('host-modal').classList.add('hidden');
+                    myColor = RED; // Host is Red
+                    startGame('host');
+                });
+            });
+        }
+
+        function showJoinMenu() {
+            document.getElementById('menu-modal').classList.add('hidden');
+            document.getElementById('join-modal').classList.remove('hidden');
+        }
+
+        function joinGame() {
+            const token = document.getElementById('join-token-input').value.trim();
+            if(!token) return;
+            
+            peer = new Peer();
+            peer.on('open', () => {
+                conn = peer.connect(token);
+                conn.on('open', () => {
+                    setupConnection();
+                    // We DO NOT start the game yet. We wait for the Host to send the rules packet.
+                });
+                conn.on('error', err => alert("Connection failed: " + err));
+            });
+        }
+
+        function setupConnection() {
+            conn.on('data', data => {
+                if(data.type === 'sync_rules') {
+                    // Client receives rules from host
+                    gameRules = data.rules;
+                    document.getElementById('join-modal').classList.add('hidden');
+                    myColor = BLACK; // Client is Black
+                    startGame('client');
+                }
+                else if(data.type === 'move') {
+                    executeMove(data.move, false); // Execute opponent's move
+                }
+            });
+        }
+
+        function copyToken() {
+            const token = document.getElementById('host-token').innerText;
+            navigator.clipboard.writeText(token);
+            alert("Token copied to clipboard!");
+        }
+
+        // --- GAME LOGIC ---
+
+        function startGame(mode) {
+            if (mode === 'cpu') updateRulesFromUI();
+
+            gameMode = mode;
+            document.getElementById('menu-modal').classList.add('hidden');
+            document.getElementById('board-container').style.display = 'block';
+            
+            initBoard();
+            currentPlayer = RED;
+            mandatoryJumpSquare = null;
+            lastMoveTarget = null;
+            updateStatus();
+            renderBoard();
+        }
+
+        function initBoard() {
+            board = Array(8).fill(null).map(() => Array(8).fill(EMPTY));
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if ((r + c) % 2 === 1) {
+                        if (r < 3) board[r][c] = BLACK;
+                        else if (r > 4) board[r][c] = RED;
+                    }
+                }
+            }
+        }
+
+        function renderBoard() {
+    const boardDiv = document.getElementById('board');
+    boardDiv.innerHTML = '';
+    
+    let isFlipped = (myColor === BLACK);
+    
+    // FIX: Check if it's currently the local player's turn
+    let isMyTurn = (gameMode === 'cpu') ? (currentPlayer === RED) : (currentPlayer === myColor);
+
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            let dispR = isFlipped ? 7 - r : r;
+            let dispC = isFlipped ? 7 - c : c;
+
+            const square = document.createElement('div');
+            square.className = `square ${(dispR + dispC) % 2 === 0 ? 'light' : 'dark'}`;
+            square.dataset.r = dispR;
+            square.dataset.c = dispC;
+
+            // FIX: Only show selection and highlights if it is YOUR turn
+            if (isMyTurn) {
+                if (selectedSquare && selectedSquare.r === dispR && selectedSquare.c === dispC) {
+                    square.classList.add('selected');
+                }
+
+                let moveObj = validMoves.find(m => m.toR === dispR && m.toC === dispC);
+                if (moveObj) {
+                    square.classList.add('highlight');
+                }
+            }
+
+            const pieceVal = board[dispR][dispC];
+            if (pieceVal !== EMPTY) {
+                const piece = document.createElement('div');
+                piece.className = `piece ${pieceVal === RED || pieceVal === RED_KING ? 'red' : 'black'}`;
+                
+                piece.innerHTML = '<i class="fas fa-crown"></i>';
+                if (pieceVal === RED_KING || pieceVal === BLACK_KING) piece.classList.add('king');
+                
+                if (lastMoveTarget && lastMoveTarget.r === dispR && lastMoveTarget.c === dispC) {
+                    piece.classList.add('just-moved');
+                }
+
+                square.appendChild(piece);
+            }
+
+            square.addEventListener('click', () => handleSquareClick(dispR, dispC));
+            boardDiv.appendChild(square);
+        }
+    }
+}
+
+        function updateStatus() {
+            const statusEl = document.getElementById('status-text');
+            if (gameMode === 'cpu' && currentPlayer === BLACK) {
+                statusEl.innerHTML = '<i class="fas fa-robot"></i> Computer is thinking...';
+            } else {
+                let colorName = currentPlayer === RED ? "Red" : "Black";
+                let colorHex = currentPlayer === RED ? "#dc2626" : "#111827";
+                let myTurn = (currentPlayer === myColor) || gameMode === 'cpu';
+                statusEl.innerHTML = myTurn 
+                    ? `<span style="color: ${colorHex};"><i class="fas fa-user"></i> Your Turn (${colorName})</span>` 
+                    : `<span style="color: ${colorHex};"><i class="fas fa-hourglass-half"></i> Opponent's Turn (${colorName})</span>`;
+            }
+        }
+
+        function handleSquareClick(r, c) {
+            if (gameMode !== 'cpu' && currentPlayer !== myColor) return;
+            if (gameMode === 'cpu' && currentPlayer === BLACK) return;
+
+            const clickedPiece = board[r][c];
+            const isMyPiece = (currentPlayer === RED && (clickedPiece === RED || clickedPiece === RED_KING)) ||
+                              (currentPlayer === BLACK && (clickedPiece === BLACK || clickedPiece === BLACK_KING));
+
+            if (mandatoryJumpSquare) {
+                if (r === mandatoryJumpSquare.r && c === mandatoryJumpSquare.c) {
+                    calculateValidMovesForPiece(r, c);
+                } else if (validMoves.find(m => m.toR === r && m.toC === c)) {
+                    executeMove(validMoves.find(m => m.toR === r && m.toC === c), true);
+                }
+                return;
+            }
+
+            if (isMyPiece) {
+                let allJumps = getAllJumpsForPlayer(currentPlayer);
+                selectedSquare = { r, c };
+                calculateValidMovesForPiece(r, c);
+                
+                if (allJumps.length > 0) {
+                    validMoves = validMoves.filter(m => m.isJump);
+                }
+                renderBoard();
+            } else if (selectedSquare && validMoves.length > 0) {
+                let moveObj = validMoves.find(m => m.toR === r && m.toC === c);
+                if (moveObj) {
+                    executeMove(moveObj, true);
+                }
+            }
+        }
+
+        function calculateValidMovesForPiece(r, c) {
+            validMoves = [];
+            const piece = board[r][c];
+            if (piece === EMPTY) return;
+
+            const isRed = piece === RED || piece === RED_KING;
+            const isKing = piece === RED_KING || piece === BLACK_KING;
+            
+            // Separate directions for moving vs jumping (for the backward jump rule)
+            const moveDirs = [];
+            const jumpDirs = [];
+
+            if (isKing) {
+                moveDirs.push(-1, 1);
+                jumpDirs.push(-1, 1);
+            } else if (isRed) {
+                moveDirs.push(-1);
+                jumpDirs.push(-1);
+                if (gameRules.normalEatBackward) jumpDirs.push(1); // Backwards jump allowed
+            } else { // Black
+                moveDirs.push(1);
+                jumpDirs.push(1);
+                if (gameRules.normalEatBackward) jumpDirs.push(-1); // Backwards jump allowed
+            }
+
+            // 1. Calculate Regular Moves
+            moveDirs.forEach(dRow => {
+                [-1, 1].forEach(dCol => {
+                    let nr = r + dRow, nc = c + dCol;
+                    if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && board[nr][nc] === EMPTY) {
+                        validMoves.push({ fromR: r, fromC: c, toR: nr, toC: nc, isJump: false });
+                    }
+                });
+            });
+
+            // 2. Calculate Jumps
+            jumpDirs.forEach(dRow => {
+                [-1, 1].forEach(dCol => {
+                    let nr = r + dRow, nc = c + dCol; // Immediate neighbor
+                    let jr = r + dRow * 2, jc = c + dCol * 2; // Jump target
+                    
+                    if (jr >= 0 && jr < 8 && jc >= 0 && jc < 8 && board[jr][jc] === EMPTY) {
+                        let midPiece = board[nr][nc];
+                        let isOpponent = isRed ? (midPiece === BLACK || midPiece === BLACK_KING) : (midPiece === RED || midPiece === RED_KING);
+                        if (isOpponent) {
+                            validMoves.push({ fromR: r, fromC: c, toR: jr, toC: jc, isJump: true, capR: nr, capC: nc });
+                        }
+                    }
+                });
+            });
+        }
+
+        function getAllJumpsForPlayer(player) {
+            let jumps = [];
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const p = board[r][c];
+                    if ((player === RED && (p === RED || p === RED_KING)) || 
+                        (player === BLACK && (p === BLACK || p === BLACK_KING))) {
+                        calculateValidMovesForPiece(r, c);
+                        jumps.push(...validMoves.filter(m => m.isJump));
+                    }
+                }
+            }
+            validMoves = []; 
+            return jumps;
+        }
+
+        function executeMove(move, isLocal) {
+            board[move.toR][move.toC] = board[move.fromR][move.fromC];
+            board[move.fromR][move.fromC] = EMPTY;
+            
+            if (move.isJump) {
+                board[move.capR][move.capC] = EMPTY;
+            }
+
+            let promoted = false;
+            if (board[move.toR][move.toC] === RED && move.toR === 0) {
+                board[move.toR][move.toC] = RED_KING;
+                promoted = true;
+            }
+            if (board[move.toR][move.toC] === BLACK && move.toR === 7) {
+                board[move.toR][move.toC] = BLACK_KING;
+                promoted = true;
+            }
+
+            if (isLocal && conn) conn.send({ type: 'move', move: move });
+
+            selectedSquare = null;
+            validMoves = [];
+            lastMoveTarget = { r: move.toR, c: move.toC }; 
+            
+            if (move.isJump && !promoted) {
+                let pieceNow = board[move.toR][move.toC];
+                let isNowKing = (pieceNow === RED_KING || pieceNow === BLACK_KING);
+
+                // Check Multi-Jump rules for King
+                if (isNowKing && !gameRules.kingMultiJump) {
+                    // Rule enabled: Kings cannot multi-jump, let turn end.
+                } else {
+                    // Standard logic: Check for more jumps
+                    calculateValidMovesForPiece(move.toR, move.toC);
+                    let furtherJumps = validMoves.filter(m => m.isJump);
+                    if (furtherJumps.length > 0) {
+                        mandatoryJumpSquare = { r: move.toR, c: move.toC };
+                        validMoves = furtherJumps; 
+                        selectedSquare = mandatoryJumpSquare;
+                        renderBoard();
+                        
+                        if (gameMode === 'cpu' && currentPlayer === BLACK) {
+                            setTimeout(() => executeMove(validMoves[0], true), 600);
+                        }
+                        return; 
+                    }
+                }
+            }
+
+            mandatoryJumpSquare = null;
+            currentPlayer = currentPlayer === RED ? BLACK : RED;
+            updateStatus();
+            renderBoard();
+            
+            setTimeout(() => lastMoveTarget = null, 400);
+
+            if (checkWin()) return;
+
+            if (gameMode === 'cpu' && currentPlayer === BLACK) {
+                setTimeout(makeCPUMove, 800);
+            }
+        }
+
+        function checkWin() {
+            let redCount = 0, blackCount = 0;
+            let redMoves = 0, blackMoves = 0;
+
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const p = board[r][c];
+                    if (p === RED || p === RED_KING) {
+                        redCount++;
+                        calculateValidMovesForPiece(r, c);
+                        redMoves += validMoves.length;
+                    }
+                    if (p === BLACK || p === BLACK_KING) {
+                        blackCount++;
+                        calculateValidMovesForPiece(r, c);
+                        blackMoves += validMoves.length;
+                    }
+                }
+            }
+            validMoves = []; 
+
+            if (redCount === 0 || (currentPlayer === RED && redMoves === 0)) return triggerWin("Black");
+            if (blackCount === 0 || (currentPlayer === BLACK && blackMoves === 0)) return triggerWin("Red");
+            
+            return false;
+        }
+
+        function triggerWin(winner) {
+            document.getElementById('win-text').innerText = `${winner} Wins!`;
+            document.getElementById('win-text').style.color = winner === 'Red' ? '#dc2626' : '#111827';
+            document.getElementById('win-modal').classList.remove('hidden');
+            return true;
+        }
+
+        // --- COMPUTER AI ---
+        function makeCPUMove() {
+            let allMoves = [];
+            let allJumps = [];
+
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if (board[r][c] === BLACK || board[r][c] === BLACK_KING) {
+                        calculateValidMovesForPiece(r, c);
+                        validMoves.forEach(m => {
+                            if (m.isJump) allJumps.push(m);
+                            else allMoves.push(m);
+                        });
+                    }
+                }
+            }
+            validMoves = [];
+
+            let chosenMove = null;
+            if (allJumps.length > 0) {
+                chosenMove = allJumps[Math.floor(Math.random() * allJumps.length)];
+            } else if (allMoves.length > 0) {
+                chosenMove = allMoves[Math.floor(Math.random() * allMoves.length)];
+            }
+
+            if (chosenMove) {
+                executeMove(chosenMove, true);
+            } else {
+                triggerWin("Red");
+            }
+        }
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jdbd Games | Snakes & Ladders Premium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #0f172a; 
+            --header-bg: rgba(255, 255, 255, 0.95);
+            --text-main: #111827;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --p1-color: #ef4444; /* Red */
+            --p2-color: #3b82f6; /* Blue */
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: var(--text-main);
+            display: flex; flex-direction: column; min-height: 100vh;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        header {
+            background: var(--header-bg); padding: 15px 25px; width: 100%;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 100;
+        }
+
+        .back-btn { text-decoration: none; color: var(--text-main); font-weight: 700; display: flex; align-items: center; gap: 8px; font-size: 1.1rem; transition: 0.2s;}
+        .back-btn:hover { color: var(--primary); transform: translateX(-3px); }
+
+        .game-status { font-family: 'Poppins', sans-serif; font-weight: 800; font-size: 1.1rem; padding: 8px 20px; background: #f3f4f6; border-radius: 20px; border: 2px solid #e5e7eb; color: #374151;}
+
+        .controls button {
+            background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+        }
+        .controls button:hover { background: var(--primary-hover); transform: translateY(-2px); }
+
+        .game-container {
+            display: flex; flex-wrap: wrap; gap: 30px; justify-content: center; align-items: flex-start;
+            padding: 40px 20px; max-width: 1200px; margin: 0 auto; width: 100%; display: none; /* Hidden until mode selected */
+        }
+
+        /* UI Sidebar */
+        .sidebar {
+            background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 20px;
+        }
+
+        .status-box { text-align: center; font-family: 'Poppins', sans-serif; }
+        .status-box h2 { font-size: 1.5rem; margin-bottom: 5px; color: #1f2937; transition: color 0.3s; }
+        .status-box p { color: #6b7280; font-weight: 600; }
+
+        .player-stats { display: flex; justify-content: space-between; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; }
+        .player-badge { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.95rem; }
+        .p1-badge { color: var(--p1-color); }
+        .p2-badge { color: var(--p2-color); }
+        .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);}
+        .p1-badge .dot { background: var(--p1-color); }
+        .p2-badge .dot { background: var(--p2-color); }
+
+        .dice-container {
+            display: flex; flex-direction: column; align-items: center; gap: 15px; padding: 20px 0; border-top: 1px dashed #cbd5e1; border-bottom: 1px dashed #cbd5e1;
+        }
+        
+        .dice-visual {
+            width: 80px; height: 80px; background: white; border: 3px solid #cbd5e1; border-radius: 16px;
+            display: flex; justify-content: center; align-items: center; font-size: 3.5rem; color: #1f2937;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1), inset 0 2px 4px rgba(255,255,255,1);
+            transition: transform 0.1s;
+        }
+        .dice-visual i { text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .dice-visual.rolling { animation: rollAnim 0.4s infinite linear; }
+
+        @keyframes rollAnim {
+            0% { transform: rotate(0deg) scale(1); }
+            25% { transform: rotate(-15deg) scale(1.1); }
+            50% { transform: rotate(0deg) scale(1); }
+            75% { transform: rotate(15deg) scale(1.1); }
+            100% { transform: rotate(0deg) scale(1); }
+        }
+
+        .btn-roll {
+            width: 100%; background: #10b981; color: white; border: none; padding: 14px; border-radius: 10px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
+            display: flex; justify-content: center; align-items: center; gap: 8px;
+        }
+        .btn-roll:hover { background: #059669; transform: translateY(-2px); }
+        .btn-roll:disabled { background: #9ca3af; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* Board Styling */
+        .board-wrapper {
+            position: relative; width: 100%; max-width: 600px; 
+            background: #8b5a2b; /* Wooden rim */
+            padding: 12px; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 2px 5px rgba(255,255,255,0.2);
+        }
+
+        .board {
+            display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(10, 1fr);
+            width: 100%; aspect-ratio: 1 / 1; background: #fff; border-radius: 4px; overflow: hidden;
+            position: relative; box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
+        }
+
+        .cell {
+            border: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: flex-start; align-items: flex-end; padding: 4px;
+            font-size: 0.85rem; font-weight: 800; color: #94a3b8; position: relative; z-index: 1;
+        }
+        .cell:nth-child(even) { background: #f8fafc; }
+        .cell:nth-child(odd) { background: #f1f5f9; }
+
+        .cell-1 { background: #dcfce7 !important; color: #166534; }
+        .cell-100 { background: #fef08a !important; color: #854d0e; }
+
+        /* SVG Overlay for Snakes and Ladders */
+        #svg-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5;
+        }
+        .snake-path { stroke: url(#snakeGrad); stroke-width: 10; fill: none; stroke-linecap: round; opacity: 0.9; filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.4));}
+        .ladder-path { stroke: #854d0e; stroke-width: 12; stroke-dasharray: 6 12; fill: none; stroke-linecap: square; opacity: 0.9; filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.4));}
+
+        /* Player Pieces */
+        .piece {
+            position: absolute; width: 6%; height: 6%; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center; color: white; font-size: 0.8rem; font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.4), 0 2px 0 #000;
+            transition: top 0.4s ease-in-out, left 0.4s ease-in-out; z-index: 10;
+            transform: translate(-50%, -50%); /* Center on coordinate */
+        }
+        
+        #piece-1 { background: radial-gradient(circle at 30% 30%, #ff5252, #991b1b); border: 2px solid #7f1d1d; }
+        #piece-2 { background: radial-gradient(circle at 30% 30%, #60a5fa, #1e3a8a); border: 2px solid #1e3a8a; }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 2000;
+            opacity: 1; transition: opacity 0.3s;
+        }
+        .modal-overlay.hidden { opacity: 0; pointer-events: none; }
+        
+        .modal-content {
+            background: white; padding: 40px; border-radius: 20px; text-align: center; max-width: 400px; width: 90%;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5); transform: scale(1); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.hidden .modal-content { transform: scale(0.8); }
+        
+        .modal-content h2 { font-family: 'Poppins', sans-serif; font-size: 2rem; margin-bottom: 20px; color: #1f2937; }
+        .modal-content button {
+            background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; font-weight: 700; font-size: 1.1rem; cursor: pointer; width: 100%; margin-bottom: 10px; transition: 0.2s;
+            display: flex; justify-content: center; align-items: center; gap: 10px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+        }
+        .modal-content button:hover { background: var(--primary-hover); transform: translateY(-2px); }
+        .modal-content button.btn-secondary { background: #f3f4f6; color: #374151; box-shadow: none; border: 2px solid #e5e7eb; }
+        .modal-content button.btn-secondary:hover { background: #e5e7eb; transform: none; }
+
+        input[type="text"] {
+            width: 100%; padding: 15px; margin-bottom: 20px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 1.1rem; text-align: center; font-family: monospace; background: #f9fafb; outline: none;
+        }
+        input[type="text"]:focus { border-color: var(--primary); }
+
+        .token-box { background: #f3f4f6; padding: 15px; border-radius: 10px; font-family: monospace; font-size: 1.3rem; margin-bottom: 20px; word-break: break-all; border: 2px dashed #cbd5e1; color: var(--primary); font-weight: bold;}
+
+        @media (max-width: 768px) {
+            .game-container { padding: 20px 10px; }
+            .cell { font-size: 0.6rem; padding: 2px; }
+            .dice-visual { width: 60px; height: 60px; font-size: 2.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="index.html" class="back-btn"><i class="fas fa-chevron-left"></i> Menu</a>
+        <div class="game-status" id="header-status">Ready</div>
+        <div class="controls"><button onclick="location.reload()"><i class="fas fa-redo-alt"></i> Restart</button></div>
+    </header>
+
+    <div id="menu-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Select Game Mode</h2>
+            <button onclick="startGame('cpu')"><i class="fas fa-robot"></i> VS Computer</button>
+            <button onclick="showHostMenu()"><i class="fas fa-wifi"></i> Create Token (Host)</button>
+            <button onclick="showJoinMenu()" style="background: #8b5cf6;"><i class="fas fa-sign-in-alt"></i> Join Token (Client)</button>
+        </div>
+    </div>
+
+    <div id="host-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2>Your Game Token</h2>
+            <p style="margin-bottom: 15px; font-size: 0.95rem; color: #4b5563;">Send this code to your friend so they can join.</p>
+            <div class="token-box" id="host-token">Generating...</div>
+            <button onclick="copyToken()"><i class="far fa-copy"></i> Copy Token</button>
+            <p id="host-status" style="margin-top: 15px; color: #d97706; font-weight: 700; font-size: 0.9rem;"><i class="fas fa-circle-notch fa-spin"></i> Waiting for opponent...</p>
+            <button class="btn-secondary" onclick="location.reload()">Cancel</button>
+        </div>
+    </div>
+
+    <div id="join-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2>Join Game</h2>
+            <p style="margin-bottom: 15px; font-size: 0.95rem; color: #4b5563;">Enter the token provided by the host.</p>
+            <input type="text" id="join-token-input" placeholder="Paste Token Here">
+            <button onclick="joinGame()"><i class="fas fa-play"></i> Connect & Play</button>
+            <button class="btn-secondary" onclick="location.reload()">Cancel</button>
+        </div>
+    </div>
+
+    <div class="game-container" id="game-container">
+        
+        <div class="sidebar">
+            <div class="status-box">
+                <h2 id="turn-indicator">Player 1's Turn</h2>
+                <p id="turn-desc">Roll the dice to move!</p>
+            </div>
+
+            <div class="player-stats">
+                <div class="player-badge p1-badge"><div class="dot"></div> P1 (Red): <span id="p1-pos">1</span></div>
+                <div class="player-badge p2-badge"><div class="dot"></div> P2 (Blue): <span id="p2-pos">1</span></div>
+            </div>
+
+            <div class="dice-container">
+                <div class="dice-visual" id="dice"><i class="fas fa-dice-one"></i></div>
+                <button class="btn-roll" id="btn-roll" onclick="handleRollClick()"><i class="fas fa-dice"></i> Roll Dice</button>
+            </div>
+        </div>
+
+        <div class="board-wrapper">
+            <div class="board" id="board">
+                <svg id="svg-layer">
+                    <defs>
+                        <linearGradient id="snakeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#991b1b" />
+                            <stop offset="100%" stop-color="#ef4444" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <div id="piece-1" class="piece">P1</div>
+            <div id="piece-2" class="piece">P2</div>
+        </div>
+
+    </div>
+
+    <div id="win-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 id="win-text" style="font-size: 2.5rem;">Player 1 Wins!</h2>
+            <p style="margin-bottom: 20px; font-weight: 600; color: #6b7280;">Congratulations on reaching 100!</p>
+            <button onclick="location.reload()"><i class="fas fa-redo"></i> Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME DATA ---
+        const boardSize = 100;
+        const ladders = { 2: 38, 7: 14, 8: 31, 15: 26, 21: 42, 28: 84, 36: 44, 51: 67, 71: 91, 78: 98, 87: 94 };
+        const snakes = { 16: 6, 46: 25, 49: 11, 62: 19, 64: 60, 74: 53, 89: 68, 92: 88, 95: 75, 99: 80 };
+        const diceIcons = ['fa-dice-one', 'fa-dice-two', 'fa-dice-three', 'fa-dice-four', 'fa-dice-five', 'fa-dice-six'];
+
+        let players = {
+            1: { id: 1, pos: 1, element: document.getElementById('piece-1'), color: '#dc2626', name: 'Player 1 (Red)' },
+            2: { id: 2, pos: 1, element: document.getElementById('piece-2'), color: '#2563eb', name: 'Player 2 (Blue)' }
+        };
+        
+        let currentPlayerId = 1;
+        let isAnimating = false;
+        
+        // Multiplayer State
+        let gameMode = ''; // 'cpu', 'host', 'client'
+        let myId = 1; 
+        let peer = null;
+        let conn = null;
+
+        // --- NETWORK & MENU LOGIC ---
+        function showHostMenu() {
+            document.getElementById('menu-modal').classList.add('hidden');
+            document.getElementById('host-modal').classList.remove('hidden');
+            
+            peer = new Peer();
+            peer.on('open', id => { document.getElementById('host-token').innerText = id; });
+            peer.on('connection', connection => {
+                conn = connection;
+                setupConnection();
+                document.getElementById('host-modal').classList.add('hidden');
+                myId = 1; 
+                startGame('host');
+            });
+        }
+
+        function showJoinMenu() {
+            document.getElementById('menu-modal').classList.add('hidden');
+            document.getElementById('join-modal').classList.remove('hidden');
+        }
+
+        function joinGame() {
+            const token = document.getElementById('join-token-input').value.trim();
+            if(!token) return;
+            
+            peer = new Peer();
+            peer.on('open', () => {
+                conn = peer.connect(token);
+                conn.on('open', () => {
+                    setupConnection();
+                    document.getElementById('join-modal').classList.add('hidden');
+                    myId = 2; 
+                    startGame('client');
+                });
+                conn.on('error', err => alert("Connection failed: " + err));
+            });
+        }
+
+        function setupConnection() {
+            conn.on('data', data => {
+                if(data.type === 'roll') {
+                    // Opponent rolled. Play animation locally with their result
+                    executeRoll(data.value);
+                }
+            });
+        }
+
+        function copyToken() {
+            const token = document.getElementById('host-token').innerText;
+            navigator.clipboard.writeText(token);
+            alert("Token copied to clipboard!");
+        }
+
+        // --- GAME INITIALIZATION ---
+        function startGame(mode) {
+            gameMode = mode;
+            if (gameMode === 'cpu') {
+                document.getElementById('menu-modal').classList.add('hidden');
+                players[2].name = 'Computer (Blue)';
+            } else {
+                players[1].name = myId === 1 ? 'You (Red)' : 'Opponent (Red)';
+                players[2].name = myId === 2 ? 'You (Blue)' : 'Opponent (Blue)';
+            }
+
+            document.getElementById('game-container').style.display = 'flex';
+            
+            generateBoard();
+            
+            setTimeout(() => {
+                drawConnections();
+                updatePiecePosition(players[1], true);
+                updatePiecePosition(players[2], true);
+                updateUI();
+            }, 100);
+        }
+
+        function generateBoard() {
+            const boardEl = document.getElementById('board');
+            for (let row = 9; row >= 0; row--) {
+                let dir = (row % 2 === 0) ? 1 : -1;
+                let start = (row % 2 === 0) ? (row * 10 + 1) : (row * 10 + 10);
+                
+                for (let col = 0; col < 10; col++) {
+                    let cellNum = start + (dir * col);
+                    let cell = document.createElement('div');
+                    cell.className = `cell cell-${cellNum}`;
+                    cell.id = `cell-${cellNum}`;
+                    cell.innerText = cellNum;
+                    boardEl.insertBefore(cell, document.getElementById('svg-layer'));
+                }
+            }
+        }
+
+        // --- DRAW SNAKES & LADDERS (SVG) ---
+        function getCellCenter(cellNum) {
+            const cell = document.getElementById(`cell-${cellNum}`);
+            const boardEl = document.getElementById('board');
+            const cellRect = cell.getBoundingClientRect();
+            const boardRect = boardEl.getBoundingClientRect();
+            return {
+                x: (cellRect.left - boardRect.left) + (cellRect.width / 2),
+                y: (cellRect.top - boardRect.top) + (cellRect.height / 2)
+            };
+        }
+
+        function drawConnections() {
+            const svg = document.getElementById('svg-layer');
+            // Keep defs
+            const defs = svg.querySelector('defs').outerHTML;
+            svg.innerHTML = defs;
+
+            // Ladders
+            for (const [start, end] of Object.entries(ladders)) {
+                const pt1 = getCellCenter(start);
+                const pt2 = getCellCenter(end);
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", pt1.x); line.setAttribute("y1", pt1.y);
+                line.setAttribute("x2", pt2.x); line.setAttribute("y2", pt2.y);
+                line.setAttribute("class", "ladder-path");
+                svg.appendChild(line);
+            }
+
+            // Snakes
+            for (const [start, end] of Object.entries(snakes)) {
+                const pt1 = getCellCenter(start); 
+                const pt2 = getCellCenter(end);   
+                const midX = (pt1.x + pt2.x) / 2;
+                const midY = (pt1.y + pt2.y) / 2;
+                const offset = 40; 
+                
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                const d = `M ${pt1.x} ${pt1.y} Q ${midX + offset} ${midY} ${pt2.x} ${pt2.y}`;
+                path.setAttribute("d", d);
+                path.setAttribute("class", "snake-path");
+                svg.appendChild(path);
+            }
+        }
+
+        // --- MOVEMENT LOGIC ---
+        function updatePiecePosition(player, instant = false) {
+            const center = getCellCenter(player.pos);
+            const boardEl = document.getElementById('board');
+            const offset = player.id === 1 ? -12 : 12;
+            
+            player.element.style.transition = instant ? 'none' : 'top 0.4s ease-in-out, left 0.4s ease-in-out';
+            
+            const leftPct = ((center.x + offset) / boardEl.clientWidth) * 100;
+            const topPct = (center.y / boardEl.clientHeight) * 100;
+
+            player.element.style.left = `${leftPct}%`;
+            player.element.style.top = `${topPct}%`;
+            
+            document.getElementById(`p${player.id}-pos`).innerText = player.pos;
+            if(instant) player.element.offsetHeight; 
+        }
+
+        const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+        async function movePlayerStepByStep(player, steps) {
+            let currentPos = player.pos;
+            let targetPos = currentPos + steps;
+            
+            if (targetPos > 100) {
+                let overflow = targetPos - 100;
+                targetPos = 100 - overflow; // Bounce back
+            }
+
+            if (currentPos < targetPos) {
+                while (player.pos < targetPos) {
+                    player.pos++;
+                    updatePiecePosition(player);
+                    await sleep(400); 
+                }
+            } else if (currentPos > targetPos) {
+                while (player.pos > targetPos) {
+                    player.pos--;
+                    updatePiecePosition(player);
+                    await sleep(400);
+                }
+            }
+            
+            if (ladders[player.pos]) {
+                await sleep(200);
+                player.pos = ladders[player.pos];
+                updatePiecePosition(player);
+                await sleep(500); 
+            } else if (snakes[player.pos]) {
+                await sleep(200);
+                player.pos = snakes[player.pos];
+                updatePiecePosition(player);
+                await sleep(500); 
+            }
+        }
+
+        // --- TURN & DICE LOGIC ---
+        function handleRollClick() {
+            if (isAnimating) return;
+            if (gameMode !== 'cpu' && currentPlayerId !== myId) return; // Not my turn in MP
+            
+            const rollValue = Math.floor(Math.random() * 6) + 1;
+            
+            if (gameMode !== 'cpu' && conn) {
+                conn.send({ type: 'roll', value: rollValue });
+            }
+            
+            executeRoll(rollValue);
+        }
+
+        async function executeRoll(finalValue) {
+            isAnimating = true;
+            updateBtnState();
+
+            const diceEl = document.getElementById('dice');
+            diceEl.classList.add('rolling');
+
+            // Fake animation
+            for (let i = 0; i < 10; i++) {
+                let randomFace = Math.floor(Math.random() * 6);
+                diceEl.innerHTML = `<i class="fas ${diceIcons[randomFace]}"></i>`;
+                await sleep(50);
+            }
+            
+            diceEl.classList.remove('rolling');
+            diceEl.innerHTML = `<i class="fas ${diceIcons[finalValue - 1]}" style="color: ${players[currentPlayerId].color}"></i>`;
+            
+            const player = players[currentPlayerId];
+            await movePlayerStepByStep(player, finalValue);
+
+            // Check Win
+            if (player.pos === 100) {
+                document.getElementById('win-text').innerText = `${player.name} Wins!`;
+                document.getElementById('win-text').style.color = player.color;
+                document.getElementById('win-modal').classList.remove('hidden');
+                return;
+            }
+
+            // Switch Turn
+            currentPlayerId = currentPlayerId === 1 ? 2 : 1;
+            isAnimating = false;
+            updateUI();
+
+            // Trigger CPU turn if needed
+            if (gameMode === 'cpu' && currentPlayerId === 2) {
+                setTimeout(() => {
+                    const cpuRoll = Math.floor(Math.random() * 6) + 1;
+                    executeRoll(cpuRoll);
+                }, 1000);
+            }
+        }
+
+        function updateUI() {
+            const turnIndicator = document.getElementById('turn-indicator');
+            const turnDesc = document.getElementById('turn-desc');
+            const player = players[currentPlayerId];
+            
+            turnIndicator.innerText = `${player.name}'s Turn`;
+            turnIndicator.style.color = player.color;
+
+            if (gameMode === 'cpu' && currentPlayerId === 2) {
+                turnDesc.innerHTML = '<i class="fas fa-robot"></i> Computer is rolling...';
+            } else if (gameMode !== 'cpu' && currentPlayerId !== myId) {
+                turnDesc.innerHTML = '<i class="fas fa-hourglass-half"></i> Waiting for opponent...';
+            } else {
+                turnDesc.innerText = 'Roll the dice to move!';
+            }
+            
+            document.getElementById('header-status').innerText = gameMode === 'cpu' ? 'VS Computer' : 'Multiplayer';
+            updateBtnState();
+        }
+
+        function updateBtnState() {
+            const btn = document.getElementById('btn-roll');
+            if (isAnimating || (gameMode !== 'cpu' && currentPlayerId !== myId) || (gameMode === 'cpu' && currentPlayerId === 2)) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Please Wait...';
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-dice"></i> Roll Dice';
+            }
+        }
+
+        window.onresize = () => {
+            if(document.getElementById('game-container').style.display === 'flex') {
+                drawConnections();
+                updatePiecePosition(players[1], true);
+                updatePiecePosition(players[2], true);
+            }
+        };
+
+    </script>
+</body>
+</html>

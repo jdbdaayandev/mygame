@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jdbd Games | Yahtzee Premium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #0f172a; 
+            --header-bg: rgba(255, 255, 255, 0.95);
+            --text-main: #111827;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --p1-color: #ef4444; /* Red */
+            --p2-color: #3b82f6; /* Blue */
+            --accent: #10b981; /* Green */
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: var(--text-main);
+            display: flex; flex-direction: column; min-height: 100vh;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        header {
+            background: var(--header-bg); padding: 15px 25px; width: 100%;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 100;
+        }
+
+        .back-btn { text-decoration: none; color: var(--text-main); font-weight: 700; display: flex; align-items: center; gap: 8px; font-size: 1.1rem; transition: 0.2s;}
+        .back-btn:hover { color: var(--primary); transform: translateX(-3px); }
+
+        .game-status { font-family: 'Poppins', sans-serif; font-weight: 800; font-size: 1.1rem; padding: 8px 20px; background: #f3f4f6; border-radius: 20px; border: 2px solid #e5e7eb; color: #374151;}
+
+        .controls button {
+            background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+        }
+        .controls button:hover { background: var(--primary-hover); transform: translateY(-2px); }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 2000;
+            opacity: 1; transition: opacity 0.3s;
+        }
+        .modal-overlay.hidden { opacity: 0; pointer-events: none; }
+        
+        .modal-content {
+            background: white; padding: 40px; border-radius: 20px; text-align: center; max-width: 400px; width: 90%;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5); transform: scale(1); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.hidden .modal-content { transform: scale(0.8); }
+        
+        .modal-content h2 { font-family: 'Poppins', sans-serif; font-size: 2rem; margin-bottom: 20px; color: #1f2937; }
+        .modal-content button {
+            background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; font-weight: 700; font-size: 1.1rem; cursor: pointer; width: 100%; margin-bottom: 10px; transition: 0.2s;
+            display: flex; justify-content: center; align-items: center; gap: 10px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+        }
+        .modal-content button:hover { background: var(--primary-hover); transform: translateY(-2px); }
+        .modal-content button.btn-secondary { background: #f3f4f6; color: #374151; box-shadow: none; border: 2px solid #e5e7eb; }
+        .modal-content button.btn-secondary:hover { background: #e5e7eb; transform: none; }
+
+        input[type="text"] { width: 100%; padding: 15px; margin-bottom: 20px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 1.1rem; text-align: center; font-family: monospace; background: #f9fafb; outline: none; }
+        .token-box { background: #f3f4f6; padding: 15px; border-radius: 10px; font-family: monospace; font-size: 1.3rem; margin-bottom: 20px; word-break: break-all; border: 2px dashed #cbd5e1; color: var(--primary); font-weight: bold;}
+
+        /* Game Layout */
+        .game-container {
+            display: flex; flex-wrap: wrap; gap: 30px; justify-content: center; align-items: flex-start;
+            padding: 40px 20px; max-width: 1200px; margin: 0 auto; width: 100%; display: none;
+        }
+
+        /* Dice Section */
+        .dice-panel {
+            background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 100%; max-width: 450px; display: flex; flex-direction: column; gap: 20px;
+        }
+
+        .status-box { text-align: center; font-family: 'Poppins', sans-serif; }
+        .status-box h2 { font-size: 1.8rem; margin-bottom: 5px; color: #1f2937; transition: color 0.3s; }
+        .status-box p { color: #6b7280; font-weight: 600; font-size: 1.1rem;}
+
+        .dice-row {
+            display: flex; justify-content: space-between; gap: 10px; padding: 20px 0;
+            border-top: 2px dashed #cbd5e1; border-bottom: 2px dashed #cbd5e1;
+            min-height: 120px; align-items: center;
+        }
+
+        .die {
+            width: 65px; height: 65px; background: white; border: 3px solid #cbd5e1; border-radius: 12px;
+            display: flex; justify-content: center; align-items: center; font-size: 2.8rem; color: #1f2937;
+            box-shadow: 0 6px 10px rgba(0,0,0,0.1), inset 0 2px 4px rgba(255,255,255,1);
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; cursor: pointer;
+        }
+
+        .die:hover { transform: translateY(-5px); }
+        .die.held { 
+            border-color: var(--accent); color: var(--accent); transform: translateY(10px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1), 0 0 15px rgba(16, 185, 129, 0.3);
+        }
+        .die.rolling { animation: shake 0.3s infinite; }
+
+        @keyframes shake {
+            0% { transform: rotate(0deg) scale(1); }
+            25% { transform: rotate(-15deg) scale(1.1); }
+            50% { transform: rotate(0deg) scale(1); }
+            75% { transform: rotate(15deg) scale(1.1); }
+            100% { transform: rotate(0deg) scale(1); }
+        }
+
+        .btn-roll {
+            width: 100%; background: var(--accent); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 1.2rem; font-weight: 800; cursor: pointer; transition: 0.2s; box-shadow: 0 6px 12px rgba(16, 185, 129, 0.3); text-transform: uppercase; letter-spacing: 1px;
+            display: flex; justify-content: center; align-items: center; gap: 10px;
+        }
+        .btn-roll:hover { background: #059669; transform: translateY(-2px); }
+        .btn-roll:disabled { background: #9ca3af; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* Scorecard Section */
+        .scorecard-panel {
+            background: white; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 100%; max-width: 500px; overflow: hidden;
+        }
+
+        .score-table { width: 100%; border-collapse: collapse; text-align: center; }
+        .score-table th, .score-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+        .score-table th { background: #f8fafc; font-weight: 800; color: #475569; font-size: 0.95rem; text-transform: uppercase;}
+        .score-table .cat-name { text-align: left; font-weight: 700; color: #1e293b; width: 45%; }
+        
+        .score-table .p1-col { color: var(--p1-color); font-weight: 700; font-size: 1.1rem; width: 27.5%; border-left: 1px solid #f1f5f9; }
+        .score-table .p2-col { color: var(--p2-color); font-weight: 700; font-size: 1.1rem; width: 27.5%; border-left: 1px solid #f1f5f9;}
+
+        /* Interactive Score Cells */
+        .score-cell { transition: 0.2s; cursor: default; }
+        .score-cell.active-target {
+            cursor: pointer; background: #f0fdf4; border-radius: 6px; position: relative;
+        }
+        .score-cell.active-target:hover { background: #dcfce7; transform: scale(1.05); box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 10;}
+        .score-cell.potential { color: #94a3b8; font-style: italic; font-weight: 600; font-size: 1rem;}
+        
+        .section-header td { background: #f1f5f9; font-weight: 800; color: #64748b; font-size: 0.85rem; padding: 8px 12px; text-transform: uppercase;}
+        .total-row td { background: #1e293b; color: white; font-weight: 800; font-size: 1.2rem; border: none;}
+        .total-row .p1-col, .total-row .p2-col { color: white; }
+
+        @media (max-width: 768px) {
+            .die { width: 50px; height: 50px; font-size: 2rem; }
+            .score-table th, .score-table td { padding: 8px; font-size: 0.85rem; }
+            .score-table .cat-name { font-size: 0.8rem; }
+            .score-table .p1-col, .score-table .p2-col { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="index.html" class="back-btn"><i class="fas fa-chevron-left"></i> Menu</a>
+        <div class="game-status" id="header-status">Ready</div>
+        <div class="controls"><button onclick="location.reload()"><i class="fas fa-redo-alt"></i> Restart</button></div>
+    </header>
+
+    <div id="menu-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Select Mode</h2>
+            <button onclick="startGame('local')"><i class="fas fa-user-friends"></i> Local 2-Player</button>
+            <button onclick="showHostMenu()"><i class="fas fa-wifi"></i> Host Game</button>
+            <button onclick="showJoinMenu()" style="background: #8b5cf6;"><i class="fas fa-sign-in-alt"></i> Join Game</button>
+        </div>
+    </div>
+
+    <div id="host-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2>Host Game</h2>
+            <p style="margin-bottom: 15px; font-size: 0.95rem; color: #4b5563;">Send this code to your opponent.</p>
+            <div class="token-box" id="host-token">Generating...</div>
+            <button onclick="copyToken()"><i class="far fa-copy"></i> Copy Token</button>
+            <p id="host-status" style="margin-top: 15px; color: #10b981; font-weight: 700;"><i class="fas fa-circle-notch fa-spin"></i> Waiting for opponent...</p>
+            <button class="btn-secondary" onclick="location.reload()">Cancel</button>
+        </div>
+    </div>
+
+    <div id="join-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2>Join Game</h2>
+            <p style="margin-bottom: 15px; font-size: 0.95rem; color: #4b5563;">Enter the host's token.</p>
+            <input type="text" id="join-token-input" placeholder="Paste Token Here">
+            <button onclick="joinGame()"><i class="fas fa-play"></i> Connect</button>
+            <button class="btn-secondary" onclick="location.reload()">Cancel</button>
+        </div>
+    </div>
+
+    <div class="game-container" id="game-container">
+        
+        <div class="dice-panel">
+            <div class="status-box">
+                <h2 id="turn-indicator">Player 1's Turn</h2>
+                <p id="turn-desc">Rolls left: 3</p>
+            </div>
+
+            <div class="dice-row" id="dice-container">
+                <div class="die" onclick="toggleHold(0)"><i class="fas fa-dice-one"></i></div>
+                <div class="die" onclick="toggleHold(1)"><i class="fas fa-dice-two"></i></div>
+                <div class="die" onclick="toggleHold(2)"><i class="fas fa-dice-three"></i></div>
+                <div class="die" onclick="toggleHold(3)"><i class="fas fa-dice-four"></i></div>
+                <div class="die" onclick="toggleHold(4)"><i class="fas fa-dice-five"></i></div>
+            </div>
+
+            <button class="btn-roll" id="btn-roll" onclick="handleRollClick()"><i class="fas fa-dice"></i> Roll Dice</button>
+        </div>
+
+        <div class="scorecard-panel">
+            <table class="score-table" id="scorecard">
+                <tr>
+                    <th class="cat-name">Category</th>
+                    <th class="p1-col" id="header-p1">P1 (Red)</th>
+                    <th class="p2-col" id="header-p2">P2 (Blue)</th>
+                </tr>
+                <tr class="section-header"><td colspan="3">Upper Section</td></tr>
+                <tr data-cat="ones"><td class="cat-name">Ones</td><td class="score-cell p1-col"></td><td class="score-cell p2-col"></td></tr>
+                <tr data-cat="twos"><td class="cat-name">Twos</td><td class="score-cell p1-col"></td><td class="score-cell p2-col"></td></tr>
+                <tr data-cat="threes"><td class="cat-name">Threes</td><td class="score-cell p1-col"></td><td class="score-cell p2-col"></td></tr>
+                <tr data-cat="fours"><td class="cat-name">Fours</td><td class="score-cell p1-col"></td><td class="score-cell p2-col"></td></tr>
+                <tr data-cat="fives"><td class="cat-name">Fives</td><td class="score-cell p1-col"></td><td class="score-cell p2-col"></td></tr>
+                <tr data-cat="sixes"><td class="cat-name">Sixes</td><td class="score-cell p1-col"></td><td class="score-cell p2-col"></td></tr>
+                <tr style="background: #f8fafc;"><td class="cat-name" style="font-size: 0.85rem; color: #64748b;">Bonus (If >= 63)</td><td class="p1-col" id="p1-bonus">0</td><td class="p2-col" id="p2-bonus">0</td></tr>
+                
+                <tr class="section-header"><td colspan="3">Lower Section</td></tr>
+                <tr data-cat="three_kind"><td class="cat-name">3 of a Kind</td><td class="score-cell p1-col"></td><td class="score-cell p2-col"></td></tr>
+                <tr data-cat="four_kind"><td class="cat-name">4 of a Kind</td><td class="score-cell p1-col"></td><td class="score-cell p2-col"></td></tr>
+                <tr data-cat="full_house"><td class="cat-name">Full House (25)</td><td class="score-cell p1-col"></td><td class="score-cell p2-col"></td></tr>
+                <tr data-cat="sm_straight"><td class="cat-name">Sm. Straight (30)</td><td class="score-cell p1-col"></td><td class="score-cell p2-col"></td></tr>
+                <tr data-cat="lg_straight"><td class="cat-name">Lg. Straight (40)</td><td class="score-cell p1-col"></td><td class="score-cell p2-col"></td></tr>
+                <tr data-cat="yahtzee"><td class="cat-name">Yahtzee (50)</td><td class="score-cell p1-col"></td><td class="score-cell p2-col"></td></tr>
+                <tr data-cat="chance"><td class="cat-name">Chance</td><td class="score-cell p1-col"></td><td class="score-cell p2-col"></td></tr>
+                
+                <tr class="total-row"><td class="cat-name" style="color: white;">Grand Total</td><td class="p1-col" id="p1-total">0</td><td class="p2-col" id="p2-total">0</td></tr>
+            </table>
+        </div>
+
+    </div>
+
+    <div id="win-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 id="win-text" style="font-size: 2.5rem;">Player 1 Wins!</h2>
+            <p id="win-score-text" style="margin-bottom: 20px; font-weight: 700; color: #6b7280;">Score: 250 vs 210</p>
+            <button onclick="location.reload()"><i class="fas fa-redo"></i> Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME STATE ---
+        const diceIcons = ['fa-dice-one', 'fa-dice-two', 'fa-dice-three', 'fa-dice-four', 'fa-dice-five', 'fa-dice-six'];
+        const categories = ['ones', 'twos', 'threes', 'fours', 'fives', 'sixes', 'three_kind', 'four_kind', 'full_house', 'sm_straight', 'lg_straight', 'yahtzee', 'chance'];
+        
+        let currentDice = [1, 1, 1, 1, 1];
+        let heldDice = [false, false, false, false, false];
+        let rollsLeft = 3;
+        let currentPlayerId = 1;
+        let hasRolled = false;
+        let isAnimating = false;
+        let turnCount = 0; // Game ends at 26 (13 per player)
+
+        let scores = {
+            1: {}, // Will hold cat: value
+            2: {}
+        };
+
+        // Multiplayer State
+        let gameMode = ''; // 'local', 'host', 'client'
+        let myId = 1; 
+        let peer = null;
+        let conn = null;
+
+        // --- NETWORK & MENU LOGIC ---
+        function showHostMenu() {
+            document.getElementById('menu-modal').classList.add('hidden');
+            document.getElementById('host-modal').classList.remove('hidden');
+            peer = new Peer();
+            peer.on('open', id => { document.getElementById('host-token').innerText = id; });
+            peer.on('connection', connection => {
+                conn = connection;
+                setupConnection();
+                document.getElementById('host-modal').classList.add('hidden');
+                myId = 1; 
+                startGame('host');
+            });
+        }
+
+        function showJoinMenu() {
+            document.getElementById('menu-modal').classList.add('hidden');
+            document.getElementById('join-modal').classList.remove('hidden');
+        }
+
+        function joinGame() {
+            const token = document.getElementById('join-token-input').value.trim();
+            if(!token) return;
+            peer = new Peer();
+            peer.on('open', () => {
+                conn = peer.connect(token);
+                conn.on('open', () => {
+                    setupConnection();
+                    document.getElementById('join-modal').classList.add('hidden');
+                    myId = 2; 
+                    startGame('client');
+                });
+                conn.on('error', err => alert("Connection failed: " + err));
+            });
+        }
+
+        function setupConnection() {
+            conn.on('data', data => {
+                if(data.type === 'roll') {
+                    currentDice = data.dice;
+                    heldDice = data.held;
+                    executeRollAnimation(data.dice, false); // false = don't broadcast
+                } else if (data.type === 'hold') {
+                    toggleHoldLocal(data.index);
+                } else if (data.type === 'score') {
+                    scoreCategoryLocal(data.cat, data.val, data.playerId);
+                }
+            });
+        }
+
+        function copyToken() {
+            navigator.clipboard.writeText(document.getElementById('host-token').innerText);
+            alert("Token copied!");
+        }
+
+        // --- GAME LOGIC ---
+        function startGame(mode) {
+            gameMode = mode;
+            document.getElementById('menu-modal').classList.add('hidden');
+            document.getElementById('game-container').style.display = 'flex';
+            
+            if (gameMode !== 'local') {
+                document.getElementById('header-p1').innerText = myId === 1 ? 'You (Red)' : 'Opp (Red)';
+                document.getElementById('header-p2').innerText = myId === 2 ? 'You (Blue)' : 'Opp (Blue)';
+                document.getElementById('header-status').innerText = 'Multiplayer';
+            } else {
+                document.getElementById('header-status').innerText = 'Local Hotseat';
+            }
+            
+            resetTurn();
+            updateUI();
+        }
+
+        function handleRollClick() {
+            if (isAnimating || rollsLeft === 0) return;
+            if (gameMode !== 'local' && currentPlayerId !== myId) return; // Not my turn
+            
+            // Generate new dice
+            let newDice = [...currentDice];
+            for (let i = 0; i < 5; i++) {
+                if (!heldDice[i]) {
+                    newDice[i] = Math.floor(Math.random() * 6) + 1;
+                }
+            }
+
+            if (gameMode !== 'local' && conn) {
+                conn.send({ type: 'roll', dice: newDice, held: heldDice });
+            }
+            
+            currentDice = newDice;
+            executeRollAnimation(currentDice, true);
+        }
+
+        async function executeRollAnimation(finalDice, isLocalOrigin) {
+            isAnimating = true;
+            hasRolled = true;
+            if(isLocalOrigin) rollsLeft--;
+            else rollsLeft--; // Keep sync
+
+            updateBtnState();
+            clearPotentialScores();
+
+            const diceElements = document.querySelectorAll('.die');
+            
+            // Shake unheld
+            diceElements.forEach((el, i) => {
+                if (!heldDice[i]) el.classList.add('rolling');
+            });
+
+            // Fake cycle
+            for (let i = 0; i < 8; i++) {
+                diceElements.forEach((el, index) => {
+                    if (!heldDice[index]) {
+                        el.innerHTML = `<i class="fas ${diceIcons[Math.floor(Math.random() * 6)]}"></i>`;
+                    }
+                });
+                await new Promise(r => setTimeout(r, 50));
+            }
+            
+            // Set final
+            diceElements.forEach((el, i) => {
+                el.classList.remove('rolling');
+                el.innerHTML = `<i class="fas ${diceIcons[finalDice[i] - 1]}"></i>`;
+            });
+
+            isAnimating = false;
+            updateUI();
+            
+            // Show potentials only if it's my turn
+            if (gameMode === 'local' || currentPlayerId === myId) {
+                showPotentialScores();
+            }
+        }
+
+        function toggleHold(index) {
+            if (!hasRolled || isAnimating || rollsLeft === 0) return;
+            if (gameMode !== 'local' && currentPlayerId !== myId) return;
+            
+            toggleHoldLocal(index);
+            if (gameMode !== 'local' && conn) conn.send({ type: 'hold', index: index });
+        }
+
+        function toggleHoldLocal(index) {
+            heldDice[index] = !heldDice[index];
+            const el = document.querySelectorAll('.die')[index];
+            if (heldDice[index]) el.classList.add('held');
+            else el.classList.remove('held');
+        }
+
+        // --- SCORING SYSTEM ---
+        function getScoreForCategory(cat, dice) {
+            let sum = dice.reduce((a, b) => a + b, 0);
+            let counts = [0, 0, 0, 0, 0, 0, 0];
+            dice.forEach(d => counts[d]++);
+
+            switch (cat) {
+                case 'ones': return counts[1] * 1;
+                case 'twos': return counts[2] * 2;
+                case 'threes': return counts[3] * 3;
+                case 'fours': return counts[4] * 4;
+                case 'fives': return counts[5] * 5;
+                case 'sixes': return counts[6] * 6;
+                case 'three_kind': return counts.some(c => c >= 3) ? sum : 0;
+                case 'four_kind': return counts.some(c => c >= 4) ? sum : 0;
+                case 'full_house': 
+                    let has3 = counts.includes(3);
+                    let has2 = counts.includes(2);
+                    let has5 = counts.includes(5); // Yahtzee also counts as FH
+                    return (has3 && has2) || has5 ? 25 : 0;
+                case 'sm_straight':
+                    let str = counts.map(c => c > 0 ? 1 : 0).join('');
+                    return (str.includes('01111') || str.includes('11110')) ? 30 : 0;
+                case 'lg_straight':
+                    let lstr = counts.map(c => c > 0 ? 1 : 0).join('');
+                    return (lstr.includes('011111') || lstr.includes('111110')) ? 40 : 0;
+                case 'yahtzee': return counts.some(c => c === 5) ? 50 : 0;
+                case 'chance': return sum;
+                default: return 0;
+            }
+        }
+
+        function showPotentialScores() {
+            categories.forEach(cat => {
+                if (scores[currentPlayerId][cat] === undefined) { // Not yet scored
+                    const potential = getScoreForCategory(cat, currentDice);
+                    const colClass = currentPlayerId === 1 ? 'p1-col' : 'p2-col';
+                    const cell = document.querySelector(`tr[data-cat="${cat}"] .${colClass}`);
+                    
+                    cell.innerHTML = `<span class="potential">${potential}</span>`;
+                    cell.classList.add('active-target');
+                    cell.onclick = () => handleScoreClick(cat, potential);
+                }
+            });
+        }
+
+        function clearPotentialScores() {
+            categories.forEach(cat => {
+                const cell1 = document.querySelector(`tr[data-cat="${cat}"] .p1-col`);
+                const cell2 = document.querySelector(`tr[data-cat="${cat}"] .p2-col`);
+                
+                if (scores[1][cat] === undefined) { cell1.innerHTML = ''; cell1.classList.remove('active-target'); cell1.onclick = null; }
+                if (scores[2][cat] === undefined) { cell2.innerHTML = ''; cell2.classList.remove('active-target'); cell2.onclick = null; }
+            });
+        }
+
+        function handleScoreClick(cat, val) {
+            if (isAnimating) return;
+            if (gameMode !== 'local' && currentPlayerId !== myId) return;
+            
+            if (gameMode !== 'local' && conn) {
+                conn.send({ type: 'score', cat: cat, val: val, playerId: currentPlayerId });
+            }
+            scoreCategoryLocal(cat, val, currentPlayerId);
+        }
+
+        function scoreCategoryLocal(cat, val, pId) {
+            scores[pId][cat] = val;
+            
+            // Update visually
+            const colClass = pId === 1 ? 'p1-col' : 'p2-col';
+            const cell = document.querySelector(`tr[data-cat="${cat}"] .${colClass}`);
+            cell.innerHTML = val;
+            cell.classList.remove('active-target');
+            cell.classList.remove('potential');
+            cell.onclick = null;
+
+            updateTotals();
+
+            turnCount++;
+            if (turnCount >= 26) {
+                endGame();
+            } else {
+                currentPlayerId = currentPlayerId === 1 ? 2 : 1;
+                resetTurn();
+            }
+        }
+
+        function updateTotals() {
+            [1, 2].forEach(pId => {
+                let upperSum = 0;
+                ['ones', 'twos', 'threes', 'fours', 'fives', 'sixes'].forEach(c => {
+                    if (scores[pId][c] !== undefined) upperSum += scores[pId][c];
+                });
+
+                let bonus = upperSum >= 63 ? 35 : 0;
+                document.getElementById(`p${pId}-bonus`).innerText = bonus;
+
+                let total = upperSum + bonus;
+                ['three_kind', 'four_kind', 'full_house', 'sm_straight', 'lg_straight', 'yahtzee', 'chance'].forEach(c => {
+                    if (scores[pId][c] !== undefined) total += scores[pId][c];
+                });
+
+                document.getElementById(`p${pId}-total`).innerText = total;
+            });
+        }
+
+        function resetTurn() {
+            rollsLeft = 3;
+            hasRolled = false;
+            heldDice = [false, false, false, false, false];
+            
+            document.querySelectorAll('.die').forEach((el, i) => {
+                el.classList.remove('held');
+                el.innerHTML = `<i class="fas ${diceIcons[currentDice[i] - 1]}"></i>`; // Reset icons to standard (not strictly necessary but clean)
+            });
+
+            clearPotentialScores();
+            updateUI();
+        }
+
+        function updateUI() {
+            const turnIndicator = document.getElementById('turn-indicator');
+            const turnDesc = document.getElementById('turn-desc');
+            const color = currentPlayerId === 1 ? 'var(--p1-color)' : 'var(--p2-color)';
+            
+            let name = gameMode === 'local' ? `Player ${currentPlayerId}` : (currentPlayerId === myId ? 'Your' : "Opponent's");
+            turnIndicator.innerText = `${name} Turn`;
+            turnIndicator.style.color = color;
+
+            if (gameMode !== 'local' && currentPlayerId !== myId) {
+                turnDesc.innerHTML = '<i class="fas fa-hourglass-half"></i> Waiting for opponent...';
+            } else {
+                turnDesc.innerText = `Rolls left: ${rollsLeft}`;
+            }
+
+            updateBtnState();
+        }
+
+        function updateBtnState() {
+            const btn = document.getElementById('btn-roll');
+            if (isAnimating || rollsLeft === 0 || (gameMode !== 'local' && currentPlayerId !== myId)) {
+                btn.disabled = true;
+            } else {
+                btn.disabled = false;
+            }
+        }
+
+        function endGame() {
+            const t1 = parseInt(document.getElementById('p1-total').innerText);
+            const t2 = parseInt(document.getElementById('p2-total').innerText);
+            
+            let winText = "";
+            let color = "";
+            if (t1 > t2) { winText = "Player 1 Wins!"; color = "var(--p1-color)"; }
+            else if (t2 > t1) { winText = "Player 2 Wins!"; color = "var(--p2-color)"; }
+            else { winText = "It's a Tie!"; color = "#1f2937"; }
+
+            if (gameMode !== 'local') {
+                if (t1 > t2 && myId === 1) winText = "You Win!";
+                if (t2 > t1 && myId === 2) winText = "You Win!";
+                if (t1 > t2 && myId === 2) winText = "You Lose!";
+                if (t2 > t1 && myId === 1) winText = "You Lose!";
+            }
+
+            document.getElementById('win-text').innerText = winText;
+            document.getElementById('win-text').style.color = color;
+            document.getElementById('win-score-text').innerText = `Final Score: ${t1} vs ${t2}`;
+            document.getElementById('win-modal').classList.remove('hidden');
+        }
+
+    </script>
+</body>
+</html>

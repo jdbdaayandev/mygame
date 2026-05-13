@@ -45,6 +45,8 @@
             align-items: center;
             box-shadow: 0 4px 10px rgba(0,0,0,0.2);
             z-index: 100;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .back-btn {
@@ -59,6 +61,21 @@
         }
 
         .back-btn:hover { color: var(--primary); }
+
+        .player-stats {
+            display: flex;
+            gap: 15px;
+            background: #f3f4f6;
+            padding: 6px 15px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: var(--text-main);
+            border: 1px solid #e5e7eb;
+        }
+
+        .stat-item i { color: #f59e0b; margin-right: 4px; }
+        .stat-item.level i { color: #2563eb; }
 
         .game-controls {
             display: flex;
@@ -88,12 +105,11 @@
         .game-controls select:hover { background: #e5e7eb; }
         .game-controls button:hover { background: #1d4ed8; }
         
-        .btn-hint {
-            background: #f59e0b !important;
-        }
-        .btn-hint:hover {
-            background: #d97706 !important;
-        }
+        .btn-hint { background: #f59e0b !important; }
+        .btn-hint:hover { background: #d97706 !important; }
+        
+        .btn-shop { background: #8b5cf6 !important; }
+        .btn-shop:hover { background: #7c3aed !important; }
 
         #game-board {
             width: 100%;
@@ -159,19 +175,50 @@
         .card-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 35px; opacity: 0.15; pointer-events: none;}
 
         .card.face-down {
+            cursor: pointer;
+            border: 3px solid white; 
+        }
+
+        .card.face-down .card-top, 
+        .card.face-down .card-bottom, 
+        .card.face-down .card-center { display: none; }
+
+        /* --- SKIN STYLES --- */
+        .skin-default {
             background: linear-gradient(135deg, #1e3a8a 25%, transparent 25%) -10px 0,
                         linear-gradient(225deg, #1e3a8a 25%, transparent 25%) -10px 0,
                         linear-gradient(315deg, #1e3a8a 25%, transparent 25%),
                         linear-gradient(45deg, #1e3a8a 25%, transparent 25%);
             background-size: 20px 20px;
             background-color: #2563eb;
-            border: 3px solid white; 
-            cursor: pointer;
         }
 
-        .card.face-down .card-top, 
-        .card.face-down .card-bottom, 
-        .card.face-down .card-center { display: none; }
+        .skin-red {
+            background: linear-gradient(135deg, #991b1b 25%, transparent 25%) -10px 0,
+                        linear-gradient(225deg, #991b1b 25%, transparent 25%) -10px 0,
+                        linear-gradient(315deg, #991b1b 25%, transparent 25%),
+                        linear-gradient(45deg, #991b1b 25%, transparent 25%);
+            background-size: 20px 20px;
+            background-color: #dc2626;
+        }
+
+        .skin-gold {
+            background: linear-gradient(135deg, #b45309 25%, transparent 25%) -10px 0,
+                        linear-gradient(225deg, #b45309 25%, transparent 25%) -10px 0,
+                        linear-gradient(315deg, #b45309 25%, transparent 25%),
+                        linear-gradient(45deg, #b45309 25%, transparent 25%);
+            background-size: 20px 20px;
+            background-color: #fbbf24;
+        }
+
+        .skin-dark {
+            background: linear-gradient(135deg, #111827 25%, transparent 25%) -10px 0,
+                        linear-gradient(225deg, #111827 25%, transparent 25%) -10px 0,
+                        linear-gradient(315deg, #111827 25%, transparent 25%),
+                        linear-gradient(45deg, #111827 25%, transparent 25%);
+            background-size: 20px 20px;
+            background-color: #374151;
+        }
 
         .hint-active {
             box-shadow: 0 0 15px 5px var(--hint-source) !important;
@@ -180,7 +227,6 @@
             transition: all 0.3s ease !important;
         }
 
-        /* The class applied to valid drop zones when dragging */
         .hint-target {
             box-shadow: 0 0 25px 8px var(--hint-target) !important;
             border-color: var(--hint-target) !important;
@@ -188,24 +234,87 @@
             transition: all 0.3s ease !important;
         }
 
-        #win-screen {
+        .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 2000; visibility: hidden; opacity: 0; transition: opacity 0.5s;
+            z-index: 2000; visibility: hidden; opacity: 0; transition: opacity 0.3s;
             color: white;
         }
-        #win-screen h1 { font-size: 50px; color: #fbbf24; margin-bottom: 20px; text-shadow: 0 0 20px rgba(251, 191, 36, 0.5); }
+        
+        .modal-overlay.active { visibility: visible; opacity: 1; }
+
+        .modal-content {
+            background: #ffffff;
+            color: var(--text-main);
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute; top: 15px; right: 20px;
+            font-size: 24px; cursor: pointer; color: #6b7280;
+        }
+        .modal-close:hover { color: #111827; }
+
+        #win-screen h1 { font-size: 50px; color: #fbbf24; margin-bottom: 10px; text-shadow: 0 0 20px rgba(251, 191, 36, 0.5); }
+        #win-screen p { font-size: 20px; margin-bottom: 25px; font-weight: 600; }
         #win-screen button { background: #fbbf24; color: black; border: none; padding: 12px 24px; font-size: 18px; font-weight: bold; border-radius: 6px; cursor: pointer;}
         #win-screen button:hover { background: #f59e0b; }
+
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .shop-item {
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            background: #f9fafb;
+        }
+
+        .shop-preview {
+            width: 50px; height: 72px;
+            border-radius: 4px;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .shop-item h3 { font-size: 0.9rem; margin: 0; }
+        .shop-item p { font-size: 0.85rem; color: #6b7280; font-weight: 600; margin: 0; }
+        .shop-item button {
+            width: 100%; padding: 6px; border: none; border-radius: 4px; cursor: pointer;
+            font-weight: bold; font-size: 0.85rem; transition: background 0.2s;
+        }
+
+        .btn-buy { background: #f59e0b; color: white; }
+        .btn-buy:hover { background: #d97706; }
+        .btn-equip { background: var(--primary); color: white; }
+        .btn-equip:hover { background: #1d4ed8; }
+        .btn-equipped { background: #10b981; color: white; cursor: default !important; }
 
         @media (max-width: 600px) {
             .card { font-size: 14px; padding: 3px; border-radius: 4px; }
             .card-center { font-size: 24px; }
             .slot { border-radius: 4px; }
-            .game-controls { gap: 5px; }
+            .game-controls { gap: 5px; flex-wrap: wrap; justify-content: center; width: 100%; }
             .game-controls select, .game-controls button { padding: 6px 10px; font-size: 0.8rem; }
             .back-btn span { display: none; } 
+            .player-stats { width: 100%; justify-content: center; }
         }
     </style>
 </head>
@@ -215,7 +324,14 @@
         <a href="index.html" class="back-btn">
             <i class="fas fa-arrow-left"></i> <span>Back to Portal</span>
         </a>
+        
+        <div class="player-stats">
+            <div class="stat-item level"><i class="fas fa-star"></i> Lvl <span id="ui-level">1</span></div>
+            <div class="stat-item"><i class="fas fa-coins"></i> <span id="ui-credits">0</span></div>
+        </div>
+
         <div class="game-controls">
+            <button class="btn-shop" onclick="openShop()"><i class="fas fa-store"></i> Shop</button>
             <select id="difficulty" onchange="initGame()">
                 <option value="1">Easy (Draw 1)</option>
                 <option value="3">Hard (Draw 3)</option>
@@ -241,9 +357,19 @@
         <div class="slot" id="slot-t6"></div>
     </div>
 
-    <div id="win-screen">
+    <div id="win-screen" class="modal-overlay">
         <h1>You Won!</h1>
+        <p id="win-rewards">+50 Credits | +50 XP</p>
         <button onclick="initGame()">Play Again</button>
+    </div>
+
+    <div id="shop-screen" class="modal-overlay">
+        <div class="modal-content">
+            <i class="fas fa-times modal-close" onclick="closeShop()"></i>
+            <h2>Card Backs Shop</h2>
+            <div class="shop-grid" id="shop-items-container">
+                </div>
+        </div>
     </div>
 
     <script>
@@ -260,6 +386,50 @@
             { value: 10, label: '10' }, { value: 11, label: 'J' }, { value: 12, label: 'Q' },
             { value: 13, label: 'K' }
         ];
+
+        // --- PLAYER PROGRESSION SYSTEM ---
+        const availableSkins = [
+            { id: 'default', name: 'Blue Classic', cost: 0, class: 'skin-default' },
+            { id: 'red', name: 'Crimson Red', cost: 150, class: 'skin-red' },
+            { id: 'gold', name: 'Luxury Gold', cost: 400, class: 'skin-gold' },
+            { id: 'dark', name: 'Dark Mode', cost: 800, class: 'skin-dark' }
+        ];
+
+        let playerStats = {
+            level: 1,
+            xp: 0,
+            credits: 0,
+            unlockedSkins: ['default'],
+            equippedSkin: 'default'
+        };
+
+        function loadStats() {
+            const saved = localStorage.getItem('solitaireStats');
+            if (saved) {
+                playerStats = { ...playerStats, ...JSON.parse(saved) };
+            }
+            updateStatsUI();
+        }
+
+        function saveStats() {
+            localStorage.setItem('solitaireStats', JSON.stringify(playerStats));
+            updateStatsUI();
+        }
+
+        function updateStatsUI() {
+            document.getElementById('ui-level').innerText = playerStats.level;
+            document.getElementById('ui-credits').innerText = playerStats.credits;
+        }
+
+        function checkLevelUp() {
+            const requiredXp = playerStats.level * 200; // Base level threshold
+            if (playerStats.xp >= requiredXp) {
+                playerStats.level++;
+                playerStats.xp -= requiredXp; // carry over remainder
+                // Could trigger a level up animation/alert here if desired
+            }
+        }
+        // ----------------------------------
 
         let state = {};
         let allCards = [];
@@ -321,8 +491,7 @@
                 return;
             }
 
-            document.getElementById('win-screen').style.visibility = 'hidden';
-            document.getElementById('win-screen').style.opacity = '0';
+            document.getElementById('win-screen').classList.remove('active');
 
             allCards.forEach(c => c.el.remove());
             allCards = [];
@@ -358,22 +527,23 @@
 
         function renderBoard() {
             let zIndexCounter = 10;
+            const currentSkinObj = availableSkins.find(s => s.id === playerStats.equippedSkin) || availableSkins[0];
 
             state.stock.forEach((card, i) => {
-                updateCardVisuals(card, 'stock', i);
+                updateCardVisuals(card, 'stock', i, currentSkinObj.class);
                 card.el.style.transform = `translate(0px, 0px)`;
                 card.el.style.zIndex = zIndexCounter++;
             });
 
             state.waste.forEach((card, i) => {
-                updateCardVisuals(card, 'waste', i);
+                updateCardVisuals(card, 'waste', i, currentSkinObj.class);
                 card.el.style.transform = `translate(${colStep}px, 0px)`;
                 card.el.style.zIndex = zIndexCounter++;
             });
 
             for(let f=0; f<4; f++) {
                 state['f'+f].forEach((card, i) => {
-                    updateCardVisuals(card, 'f'+f, i);
+                    updateCardVisuals(card, 'f'+f, i, currentSkinObj.class);
                     card.el.style.transform = `translate(${colStep*(f+3)}px, 0px)`;
                     card.el.style.zIndex = zIndexCounter++;
                 });
@@ -382,7 +552,7 @@
             for(let t=0; t<7; t++) {
                 let unrevealedCount = 0;
                 state['t'+t].forEach((card, i) => {
-                    updateCardVisuals(card, 't'+t, i);
+                    updateCardVisuals(card, 't'+t, i, currentSkinObj.class);
                     if(card.faceUp) {
                         let revealedIndex = i - unrevealedCount;
                         card.el.style.transform = `translate(${colStep * t}px, ${row1Y + (unrevealedCount * (ch*0.1)) + (revealedIndex * (ch*0.28))}px)`;
@@ -395,7 +565,7 @@
             }
         }
 
-        function updateCardVisuals(card, pileId, index) {
+        function updateCardVisuals(card, pileId, index, skinClass) {
             let el = card.el;
             el.dataset.pile = pileId;
             el.dataset.index = index;
@@ -405,7 +575,7 @@
             if(card.faceUp) {
                 el.className = `card ${card.color}`;
             } else {
-                el.className = 'card face-down';
+                el.className = `card face-down ${skinClass}`;
             }
         }
 
@@ -449,12 +619,84 @@
 
         function checkWin() {
             if (state.f0.length === 13 && state.f1.length === 13 && state.f2.length === 13 && state.f3.length === 13) {
-                document.getElementById('win-screen').style.visibility = 'visible';
-                document.getElementById('win-screen').style.opacity = '1';
+                // Determine rewards
+                let drawRule = parseInt(document.getElementById('difficulty').value);
+                let rewardAmount = drawRule === 1 ? 50 : 120;
+                
+                playerStats.credits += rewardAmount;
+                playerStats.xp += rewardAmount;
+                checkLevelUp();
+                saveStats();
+
+                document.getElementById('win-rewards').innerText = `+${rewardAmount} Credits | +${rewardAmount} XP`;
+                document.getElementById('win-screen').classList.add('active');
             }
         }
 
-        // Button Hint Logic
+        // --- SHOP FUNCTIONS ---
+        function openShop() {
+            renderShopItems();
+            document.getElementById('shop-screen').classList.add('active');
+        }
+
+        function closeShop() {
+            document.getElementById('shop-screen').classList.remove('active');
+        }
+
+        function buySkin(skinId) {
+            const skin = availableSkins.find(s => s.id === skinId);
+            if (!skin || playerStats.unlockedSkins.includes(skinId)) return;
+
+            if (playerStats.credits >= skin.cost) {
+                playerStats.credits -= skin.cost;
+                playerStats.unlockedSkins.push(skinId);
+                playerStats.equippedSkin = skinId;
+                saveStats();
+                renderShopItems();
+                renderBoard(); // Update visually immediately
+            } else {
+                alert("Not enough credits!");
+            }
+        }
+
+        function equipSkin(skinId) {
+            if (playerStats.unlockedSkins.includes(skinId)) {
+                playerStats.equippedSkin = skinId;
+                saveStats();
+                renderShopItems();
+                renderBoard(); // Update visually immediately
+            }
+        }
+
+        function renderShopItems() {
+            const container = document.getElementById('shop-items-container');
+            container.innerHTML = '';
+
+            availableSkins.forEach(skin => {
+                const isUnlocked = playerStats.unlockedSkins.includes(skin.id);
+                const isEquipped = playerStats.equippedSkin === skin.id;
+
+                let buttonHtml = '';
+                if (isEquipped) {
+                    buttonHtml = `<button class="btn-equipped">Equipped</button>`;
+                } else if (isUnlocked) {
+                    buttonHtml = `<button class="btn-equip" onclick="equipSkin('${skin.id}')">Equip</button>`;
+                } else {
+                    buttonHtml = `<button class="btn-buy" onclick="buySkin('${skin.id}')">${skin.cost} Credits</button>`;
+                }
+
+                const item = document.createElement('div');
+                item.className = 'shop-item';
+                item.innerHTML = `
+                    <div class="shop-preview ${skin.class}"></div>
+                    <h3>${skin.name}</h3>
+                    ${buttonHtml}
+                `;
+                container.appendChild(item);
+            });
+        }
+        // ----------------------
+
         function showHint() {
             clearDropZoneHighlights();
             document.querySelectorAll('.hint-active').forEach(el => el.classList.remove('hint-active'));
@@ -498,9 +740,7 @@
                 if (firstFaceUpIdx !== -1) {
                     for (let j = firstFaceUpIdx; j < pile.length; j++) {
                         let seq = pile.slice(j);
-                        
                         if (j === 0 && seq[0].value === 13) continue;
-
                         for(let t=0; t<7; t++) {
                             if (i === t) continue;
                             if (isValidMove('t'+i, 't'+t, seq)) return flashCards(seq, 't'+t);
@@ -514,18 +754,13 @@
             setTimeout(() => stockSlot.classList.remove('hint-active'), 1500);
         }
 
-        // --- NEW DRAG HINT FUNCTIONS ---
         function highlightValidDropZones(cards, originPile) {
             const allPiles = ['f0', 'f1', 'f2', 'f3', 't0', 't1', 't2', 't3', 't4', 't5', 't6'];
-            
             allPiles.forEach(targetPileId => {
-                // Ignore the pile it came from and check if the move is legal
                 if (targetPileId !== originPile && isValidMove(originPile, targetPileId, cards)) {
-                    // Find the exact DOM element to highlight (top card, or empty slot)
                     let targetSlot = document.getElementById('slot-' + targetPileId);
                     let targetTopCard = state[targetPileId].length > 0 ? state[targetPileId][state[targetPileId].length - 1].el : null;
                     let targetEl = targetTopCard || targetSlot;
-                    
                     if (targetEl) targetEl.classList.add('hint-target');
                 }
             });
@@ -534,7 +769,6 @@
         function clearDropZoneHighlights() {
             document.querySelectorAll('.hint-target').forEach(el => el.classList.remove('hint-target'));
         }
-        // -------------------------------
 
         let isDragging = false;
         let dragOrigin = null;
@@ -542,10 +776,8 @@
         let dragOffsetX = 0, dragOffsetY = 0;
 
         document.addEventListener('pointerdown', e => {
-            if (e.target.id === 'slot-stock') {
-                drawStock();
-                return;
-            }
+            if (e.target.id === 'slot-stock') { drawStock(); return; }
+            if (e.target.closest('.modal-overlay') || e.target.closest('.btn-shop')) return; // Ignore drag clicks in shop
 
             const cardEl = e.target.closest('.card');
             if (!cardEl) return;
@@ -555,14 +787,12 @@
 
             if (pileId === 'stock') { drawStock(); return; }
             if (!state[pileId][index].faceUp) return;
-            
             if (pileId === 'waste' && index !== state.waste.length - 1) return;
 
             isDragging = true;
             dragOrigin = pileId;
             draggedCards = state[pileId].splice(index);
 
-            // Trigger the drag hints!
             highlightValidDropZones(draggedCards, dragOrigin);
 
             const boardRect = document.getElementById('game-board').getBoundingClientRect();
@@ -573,7 +803,7 @@
 
             draggedCards.forEach((card, i) => {
                 card.el.classList.add('dragging');
-                card.el.style.zIndex = 7000 + i; // Ensured dragging card is always on top of hints
+                card.el.style.zIndex = 7000 + i; 
                 let mouseX = e.clientX - boardRect.left - dragOffsetX;
                 let mouseY = e.clientY - boardRect.top - dragOffsetY;
                 card.el.style.transform = `translate(${mouseX}px, ${mouseY + (i * (ch*0.28))}px)`;
@@ -594,12 +824,8 @@
         document.addEventListener('pointerup', e => {
             if (!isDragging) return;
             isDragging = false;
-
-            // Remove the hints upon drop
             clearDropZoneHighlights();
-
             draggedCards.forEach(card => card.el.classList.remove('dragging'));
-
             draggedCards.forEach(card => card.el.style.pointerEvents = 'none');
             const targetEl = document.elementFromPoint(e.clientX, e.clientY);
             draggedCards.forEach(card => card.el.style.pointerEvents = 'auto');
@@ -650,7 +876,10 @@
             }
         });
 
-        window.addEventListener('load', initGame);
+        window.addEventListener('load', () => {
+            loadStats();
+            initGame();
+        });
     </script>
 </body>
 </html>
