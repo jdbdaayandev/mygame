@@ -393,7 +393,26 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        // 1. IMPORT FIREBASE (Version 12.13.0 to match your portal)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+        // 2. YOUR FIREBASE CONFIG
+        const firebaseConfig = {
+            apiKey: "AIzaSyDPXozTnQ3Xt7eWVEsCjEpZcaV1ym_uZ30",
+            authDomain: "jdbgames-8cdb2.firebaseapp.com",
+            projectId: "jdbgames-8cdb2",
+            storageBucket: "jdbgames-8cdb2.firebasestorage.app",
+            messagingSenderId: "316275948182",
+            appId: "1:316275948182:web:f10ec25023bae6ab6ea0b7"
+        };
+
+        // 3. INITIALIZE FIRESTORE
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // --- CARDS & SUITS DATA ---
         const suits = [
             { name: 'spades', symbol: '♠', color: 'black' },
             { name: 'hearts', symbol: '♥', color: 'red' },
@@ -408,7 +427,7 @@
             { value: 13, label: 'K' }
         ];
 
-        // --- PLAYER PROGRESSION SYSTEM ---
+        // --- PLAYER PROGRESSION SYSTEM (WITH CLOUD MIGRATION) ---
         const availableSkins = [
             { id: 'default', name: 'Blue Classic', cost: 0, class: 'skin-default' },
             { id: 'red', name: 'Crimson Red', cost: 150, class: 'skin-red' },
@@ -424,29 +443,66 @@
         ];
 
         let playerStats = {
-            level: 1,
-            xp: 0,
-            credits: 0,
-            unlockedSkins: ['default'],
-            equippedSkin: 'default',
-            unlockedBoardSkins: ['classic'],
-            equippedBoardSkin: 'classic'
+            level: 1, xp: 0, credits: 0,
+            unlockedSkins: ['default'], equippedSkin: 'default',
+            unlockedBoardSkins: ['classic'], equippedBoardSkin: 'classic'
         };
 
-        function loadStats() {
-            const saved = localStorage.getItem('solitaireStats');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                playerStats = { ...playerStats, ...parsed };
-                if(!playerStats.unlockedBoardSkins) playerStats.unlockedBoardSkins = ['classic'];
-                if(!playerStats.equippedBoardSkin) playerStats.equippedBoardSkin = 'classic';
+        async function loadStats() {
+            const uid = localStorage.getItem('jdbd_uid');
+            const localSaved = localStorage.getItem('solitaireStats');
+            let localData = localSaved ? JSON.parse(localSaved) : null;
+            
+            if (uid) {
+                try {
+                    const docRef = doc(db, "solitaire_stats", uid);
+                    const docSnap = await getDoc(docRef);
+                    
+                    if (docSnap.exists()) {
+                        // 1. Cloud save exists. Load from Firebase.
+                        playerStats = { ...playerStats, ...docSnap.data() };
+                        console.log("Loaded stats from Cloud.");
+                    } else if (localData) {
+                        // 2. NEW ACCOUNT MIGRATION! Cloud is empty, but local data exists.
+                        playerStats = { ...playerStats, ...localData };
+                        await setDoc(docRef, playerStats); // Push local data to cloud
+                        console.log("Migrated local guest progress to Firebase Cloud!");
+                    } else {
+                        // 3. Brand new account, no local data. Initialize empty cloud save.
+                        await setDoc(docRef, playerStats);
+                        console.log("Created new Cloud save.");
+                    }
+                } catch(e) { console.error("Error loading cloud stats:", e); }
+            } else {
+                // 4. Playing as Guest. Load local data.
+                if (localData) {
+                    playerStats = { ...playerStats, ...localData };
+                    console.log("Loaded stats from Local Storage.");
+                }
             }
+            
+            // Safety check for older save files
+            if(!playerStats.unlockedBoardSkins) playerStats.unlockedBoardSkins = ['classic'];
+            if(!playerStats.equippedBoardSkin) playerStats.equippedBoardSkin = 'classic';
+
             updateStatsUI();
             applyBoardSkin();
         }
 
-        function saveStats() {
+        async function saveStats() {
+            const uid = localStorage.getItem('jdbd_uid');
+            
+            // Always save locally as a backup / offline play
             localStorage.setItem('solitaireStats', JSON.stringify(playerStats));
+            
+            if (uid) {
+                // Also save to Cloud if logged in
+                try {
+                    const docRef = doc(db, "solitaire_stats", uid);
+                    await setDoc(docRef, playerStats, { merge: true });
+                } catch(e) { console.error("Error saving cloud stats:", e); }
+            }
+            
             updateStatsUI();
         }
 
@@ -469,6 +525,7 @@
         }
         // ----------------------------------
 
+        // --- GAME VARIABLES & LAYOUT ---
         let state = {};
         let allCards = [];
         let cw, ch, gap, colStep, row0Y, row1Y;
@@ -482,7 +539,6 @@
         function updateLayout() {
             const board = document.getElementById('game-board');
             let bw = board.clientWidth;
-            
             if (bw === 0) return false;
 
             cw = bw / 9.5; 
@@ -530,7 +586,6 @@
             }
 
             document.getElementById('win-screen').classList.remove('active');
-
             allCards.forEach(c => c.el.remove());
             allCards = [];
 
@@ -559,7 +614,6 @@
                 }
             }
             state.stock = deck;
-
             renderBoard();
         }
 
@@ -663,6 +717,8 @@
                 playerStats.credits += rewardAmount;
                 playerStats.xp += rewardAmount;
                 checkLevelUp();
+                
+                // Triggers the Cloud Database save!
                 saveStats();
 
                 document.getElementById('win-rewards').innerText = `+${rewardAmount} Credits | +${rewardAmount} XP`;
@@ -697,6 +753,7 @@
                     applyBoardSkin();
                 }
 
+                // Triggers the Cloud Database save!
                 saveStats();
                 renderShopItems();
                 renderBoard(); 
@@ -745,21 +802,18 @@
             cardContainer.innerHTML = '';
             boardContainer.innerHTML = '';
 
-            // Render Card Backs
             availableSkins.forEach(skin => {
                 const isUnlocked = playerStats.unlockedSkins.includes(skin.id);
                 const isEquipped = playerStats.equippedSkin === skin.id;
                 cardContainer.innerHTML += generateShopCard(skin, isUnlocked, isEquipped, 'card');
             });
 
-            // Render Board Skins
             availableBoardSkins.forEach(skin => {
                 const isUnlocked = playerStats.unlockedBoardSkins.includes(skin.id);
                 const isEquipped = playerStats.equippedBoardSkin === skin.id;
                 boardContainer.innerHTML += generateShopCard(skin, isUnlocked, isEquipped, 'board');
             });
         }
-        // ----------------------
 
         function showHint() {
             clearDropZoneHighlights();
@@ -834,6 +888,7 @@
             document.querySelectorAll('.hint-target').forEach(el => el.classList.remove('hint-target'));
         }
 
+        // --- DRAG AND DROP ---
         let isDragging = false;
         let dragOrigin = null;
         let draggedCards = [];
@@ -940,6 +995,17 @@
             }
         });
 
+        // --- EXPORT FUNCTIONS TO HTML ---
+        // Because we are using <script type="module">, we must manually tell the browser 
+        // that our HTML buttons are allowed to trigger these functions.
+        window.initGame = initGame;
+        window.openShop = openShop;
+        window.closeShop = closeShop;
+        window.showHint = showHint;
+        window.buyItem = buyItem;
+        window.equipItem = equipItem;
+
+        // START GAME
         window.addEventListener('load', () => {
             loadStats();
             initGame();
