@@ -156,10 +156,15 @@
             background: #f0fdf4; 
         }
 
-        /* Snakes and Ladders gets a special neon hover state */
+        /* Custom Hover States for specific games */
         .card-snakes:hover .card-image {
             color: #8b5cf6;
             background: #f5f3ff;
+        }
+        
+        .card-generals:hover .card-image {
+            color: #dc2626;
+            background: #fef2f2;
         }
 
         .card-content {
@@ -269,18 +274,18 @@
                 </div>
             </div>
 
-            <div class="game-card">
+            <div class="game-card card-generals">
                 <div class="card-image">
-                    <i class="fas fa-chess-knight"></i>
+                    <i class="fas fa-shield-alt"></i>
                 </div>
                 <div class="card-content">
                     <div class="game-tags">
                         <span class="tag tag-sp"><i class="fas fa-robot"></i> VS CPU</span>
                         <span class="tag tag-mp"><i class="fas fa-wifi"></i> Multiplayer</span>
                     </div>
-                    <h3 class="card-title">Chess</h3>
-                    <p class="card-desc">Play a classic game of Chess. Challenge the built-in AI opponent or host a peer-to-peer multiplayer match with a friend!</p>
-                    <a href="chess.html" class="play-btn">Play Now</a>
+                    <h3 class="card-title">Game of the Generals</h3>
+                    <p class="card-desc">Outsmart your opponent in this classic strategy game. Deploy your hidden army, utilize the Arbiter, and capture the enemy flag!</p>
+                    <a href="generals.html" class="play-btn" style="background: #dc2626;">Play Now</a>
                 </div>
             </div>
 
@@ -296,6 +301,21 @@
                     <h3 class="card-title">Dama Premium</h3>
                     <p class="card-desc">Play premium Checkers with 3D tactile pieces. Challenge the built-in AI or host a seamless peer-to-peer multiplayer match with a friend!</p>
                     <a href="dama.html" class="play-btn">Play Now</a>
+                </div>
+            </div>
+
+            <div class="game-card">
+                <div class="card-image">
+                    <i class="fas fa-chess-knight"></i>
+                </div>
+                <div class="card-content">
+                    <div class="game-tags">
+                        <span class="tag tag-sp"><i class="fas fa-robot"></i> VS CPU</span>
+                        <span class="tag tag-mp"><i class="fas fa-wifi"></i> Multiplayer</span>
+                    </div>
+                    <h3 class="card-title">Chess</h3>
+                    <p class="card-desc">Play a classic game of Chess. Challenge the built-in AI opponent or host a peer-to-peer multiplayer match with a friend!</p>
+                    <a href="chess.html" class="play-btn">Play Now</a>
                 </div>
             </div>
 

@@ -9,7 +9,6 @@
     
     <style>
         :root {
-            --table-color: #0e6b36; 
             --header-bg: #ffffff;
             --text-main: #111827;
             --primary: #2563eb;
@@ -25,9 +24,6 @@
         }
 
         body {
-            background-color: var(--table-color);
-            background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-            background-size: 20px 20px;
             color: var(--text-main);
             overflow-x: hidden;
             user-select: none;
@@ -35,6 +31,29 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
+        }
+
+        /* --- BOARD SKINS --- */
+        .board-classic {
+            background-color: #0e6b36;
+            background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .board-wood {
+            background-color: #5c4033;
+            background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.1) 0px, rgba(0,0,0,0.1) 2px, transparent 2px, transparent 10px);
+        }
+
+        .board-ocean {
+            background-color: #0f172a;
+            background-image: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+        }
+
+        .board-royal {
+            background-color: #4c1d95;
+            background-image: linear-gradient(45deg, rgba(0,0,0,0.1) 25%, transparent 25%, transparent 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1) 75%, transparent 75%, transparent);
+            background-size: 40px 40px;
         }
 
         header {
@@ -271,8 +290,6 @@
             grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
             gap: 15px;
             margin-top: 20px;
-            max-height: 60vh;
-            overflow-y: auto;
             padding: 10px;
         }
 
@@ -318,7 +335,7 @@
         }
     </style>
 </head>
-<body>
+<body class="board-classic">
 
     <header>
         <a href="index.html" class="back-btn">
@@ -364,11 +381,15 @@
     </div>
 
     <div id="shop-screen" class="modal-overlay">
-        <div class="modal-content">
+        <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
             <i class="fas fa-times modal-close" onclick="closeShop()"></i>
-            <h2>Card Backs Shop</h2>
-            <div class="shop-grid" id="shop-items-container">
-                </div>
+            <h2>Item Shop</h2>
+            
+            <h3 style="margin-top: 20px; text-align: left; font-size: 1.1rem; color: #4b5563; border-bottom: 2px solid #e5e7eb; padding-bottom: 5px;">Card Backs</h3>
+            <div class="shop-grid" id="shop-items-container"></div>
+
+            <h3 style="margin-top: 20px; text-align: left; font-size: 1.1rem; color: #4b5563; border-bottom: 2px solid #e5e7eb; padding-bottom: 5px;">Table Mats</h3>
+            <div class="shop-grid" id="shop-boards-container"></div>
         </div>
     </div>
 
@@ -395,20 +416,33 @@
             { id: 'dark', name: 'Dark Mode', cost: 800, class: 'skin-dark' }
         ];
 
+        const availableBoardSkins = [
+            { id: 'classic', name: 'Classic Green', cost: 0, class: 'board-classic' },
+            { id: 'wood', name: 'Mahogany', cost: 200, class: 'board-wood' },
+            { id: 'ocean', name: 'Deep Ocean', cost: 500, class: 'board-ocean' },
+            { id: 'royal', name: 'Royal Velvet', cost: 1000, class: 'board-royal' }
+        ];
+
         let playerStats = {
             level: 1,
             xp: 0,
             credits: 0,
             unlockedSkins: ['default'],
-            equippedSkin: 'default'
+            equippedSkin: 'default',
+            unlockedBoardSkins: ['classic'],
+            equippedBoardSkin: 'classic'
         };
 
         function loadStats() {
             const saved = localStorage.getItem('solitaireStats');
             if (saved) {
-                playerStats = { ...playerStats, ...JSON.parse(saved) };
+                const parsed = JSON.parse(saved);
+                playerStats = { ...playerStats, ...parsed };
+                if(!playerStats.unlockedBoardSkins) playerStats.unlockedBoardSkins = ['classic'];
+                if(!playerStats.equippedBoardSkin) playerStats.equippedBoardSkin = 'classic';
             }
             updateStatsUI();
+            applyBoardSkin();
         }
 
         function saveStats() {
@@ -422,12 +456,16 @@
         }
 
         function checkLevelUp() {
-            const requiredXp = playerStats.level * 200; // Base level threshold
+            const requiredXp = playerStats.level * 200; 
             if (playerStats.xp >= requiredXp) {
                 playerStats.level++;
-                playerStats.xp -= requiredXp; // carry over remainder
-                // Could trigger a level up animation/alert here if desired
+                playerStats.xp -= requiredXp; 
             }
+        }
+        
+        function applyBoardSkin() {
+            const currentBoard = availableBoardSkins.find(s => s.id === playerStats.equippedBoardSkin) || availableBoardSkins[0];
+            document.body.className = currentBoard.class;
         }
         // ----------------------------------
 
@@ -619,7 +657,6 @@
 
         function checkWin() {
             if (state.f0.length === 13 && state.f1.length === 13 && state.f2.length === 13 && state.f3.length === 13) {
-                // Determine rewards
                 let drawRule = parseInt(document.getElementById('difficulty').value);
                 let rewardAmount = drawRule === 1 ? 50 : 120;
                 
@@ -643,56 +680,83 @@
             document.getElementById('shop-screen').classList.remove('active');
         }
 
-        function buySkin(skinId) {
-            const skin = availableSkins.find(s => s.id === skinId);
-            if (!skin || playerStats.unlockedSkins.includes(skinId)) return;
+        function buyItem(itemId, type) {
+            const list = type === 'card' ? availableSkins : availableBoardSkins;
+            const unlockList = type === 'card' ? playerStats.unlockedSkins : playerStats.unlockedBoardSkins;
+            const item = list.find(s => s.id === itemId);
 
-            if (playerStats.credits >= skin.cost) {
-                playerStats.credits -= skin.cost;
-                playerStats.unlockedSkins.push(skinId);
-                playerStats.equippedSkin = skinId;
+            if (!item || unlockList.includes(itemId)) return;
+
+            if (playerStats.credits >= item.cost) {
+                playerStats.credits -= item.cost;
+                unlockList.push(itemId);
+                
+                if (type === 'card') playerStats.equippedSkin = itemId;
+                if (type === 'board') {
+                    playerStats.equippedBoardSkin = itemId;
+                    applyBoardSkin();
+                }
+
                 saveStats();
                 renderShopItems();
-                renderBoard(); // Update visually immediately
+                renderBoard(); 
             } else {
                 alert("Not enough credits!");
             }
         }
 
-        function equipSkin(skinId) {
-            if (playerStats.unlockedSkins.includes(skinId)) {
-                playerStats.equippedSkin = skinId;
+        function equipItem(itemId, type) {
+            if (type === 'card' && playerStats.unlockedSkins.includes(itemId)) {
+                playerStats.equippedSkin = itemId;
                 saveStats();
                 renderShopItems();
-                renderBoard(); // Update visually immediately
+                renderBoard(); 
+            } else if (type === 'board' && playerStats.unlockedBoardSkins.includes(itemId)) {
+                playerStats.equippedBoardSkin = itemId;
+                saveStats();
+                renderShopItems();
+                applyBoardSkin();
             }
         }
 
-        function renderShopItems() {
-            const container = document.getElementById('shop-items-container');
-            container.innerHTML = '';
+        function generateShopCard(item, isUnlocked, isEquipped, type) {
+            let buttonHtml = '';
+            if (isEquipped) {
+                buttonHtml = `<button class="btn-equipped">Equipped</button>`;
+            } else if (isUnlocked) {
+                buttonHtml = `<button class="btn-equip" onclick="equipItem('${item.id}', '${type}')">Equip</button>`;
+            } else {
+                buttonHtml = `<button class="btn-buy" onclick="buyItem('${item.id}', '${type}')">${item.cost} Credits</button>`;
+            }
 
+            return `
+                <div class="shop-item">
+                    <div class="shop-preview ${item.class}"></div>
+                    <h3>${item.name}</h3>
+                    ${buttonHtml}
+                </div>
+            `;
+        }
+
+        function renderShopItems() {
+            const cardContainer = document.getElementById('shop-items-container');
+            const boardContainer = document.getElementById('shop-boards-container');
+            
+            cardContainer.innerHTML = '';
+            boardContainer.innerHTML = '';
+
+            // Render Card Backs
             availableSkins.forEach(skin => {
                 const isUnlocked = playerStats.unlockedSkins.includes(skin.id);
                 const isEquipped = playerStats.equippedSkin === skin.id;
+                cardContainer.innerHTML += generateShopCard(skin, isUnlocked, isEquipped, 'card');
+            });
 
-                let buttonHtml = '';
-                if (isEquipped) {
-                    buttonHtml = `<button class="btn-equipped">Equipped</button>`;
-                } else if (isUnlocked) {
-                    buttonHtml = `<button class="btn-equip" onclick="equipSkin('${skin.id}')">Equip</button>`;
-                } else {
-                    buttonHtml = `<button class="btn-buy" onclick="buySkin('${skin.id}')">${skin.cost} Credits</button>`;
-                }
-
-                const item = document.createElement('div');
-                item.className = 'shop-item';
-                item.innerHTML = `
-                    <div class="shop-preview ${skin.class}"></div>
-                    <h3>${skin.name}</h3>
-                    ${buttonHtml}
-                `;
-                container.appendChild(item);
+            // Render Board Skins
+            availableBoardSkins.forEach(skin => {
+                const isUnlocked = playerStats.unlockedBoardSkins.includes(skin.id);
+                const isEquipped = playerStats.equippedBoardSkin === skin.id;
+                boardContainer.innerHTML += generateShopCard(skin, isUnlocked, isEquipped, 'board');
             });
         }
         // ----------------------
@@ -777,7 +841,7 @@
 
         document.addEventListener('pointerdown', e => {
             if (e.target.id === 'slot-stock') { drawStock(); return; }
-            if (e.target.closest('.modal-overlay') || e.target.closest('.btn-shop')) return; // Ignore drag clicks in shop
+            if (e.target.closest('.modal-overlay') || e.target.closest('.btn-shop')) return;
 
             const cardEl = e.target.closest('.card');
             if (!cardEl) return;

@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jdbd Games | Game of the Generals</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #1f2937;
+            --board-bg: #4b5563;
+            --square-light: #9ca3af;
+            --square-dark: #6b7280;
+            --player-color: #2563eb;
+            --enemy-color: #dc2626;
+            --text-main: #f9fafb;
+            --highlight: rgba(250, 204, 21, 0.4);
+            --selected: rgba(59, 130, 246, 0.6);
+            --setup-zone: rgba(59, 130, 246, 0.25);
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body {
+            background-color: var(--bg-color); color: var(--text-main);
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+            user-select: none;
+        }
+
+        header {
+            background: #111827; width: 100%; padding: 15px 20px; display: flex;
+            justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        .brand { font-size: 1.2rem; font-weight: 700; color: #fbbf24; }
+        
+        .controls { display: flex; gap: 10px; }
+        .controls button {
+            background: var(--player-color); color: white; border: none; padding: 8px 16px;
+            border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .controls button:hover { background: var(--primary-hover); }
+        .controls button.help-btn { background: #059669; }
+        .controls button.help-btn:hover { background: #047857; }
+
+        .game-header-area {
+            display: flex; flex-direction: column; align-items: center; margin-top: 15px; gap: 10px;
+        }
+
+        #status-bar { font-size: 1.1rem; font-weight: 600; color: #fbbf24; text-align: center;}
+        
+        #ready-btn {
+            background: #fbbf24; color: black; border: none; padding: 10px 20px;
+            border-radius: 6px; font-weight: bold; cursor: pointer; display: none; font-size: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: 0.2s;
+        }
+        #ready-btn:hover { background: #f59e0b; transform: translateY(-2px); }
+
+        #board-container {
+            margin-top: 15px; padding: 10px; background: #111827; border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: none;
+        }
+
+        .board {
+            display: grid; grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(8, 1fr);
+            width: 90vw; max-width: 600px; height: 80vw; max-height: 533px; gap: 2px; background: #111827;
+        }
+
+        .square {
+            background-color: var(--square-dark); display: flex; justify-content: center;
+            align-items: center; position: relative; cursor: pointer;
+        }
+
+        .square.light { background-color: var(--square-light); }
+        .square.selected { background-color: var(--selected) !important; }
+        .square.highlight { background-color: var(--highlight) !important; }
+        .square.setup-zone { box-shadow: inset 0 0 15px var(--setup-zone); }
+
+        .piece {
+            width: 85%; height: 85%; border-radius: 6px; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; font-weight: bold; font-size: 0.8rem;
+            text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.4); transition: transform 0.15s;
+        }
+
+        .piece.player { background: linear-gradient(135deg, #3b82f6, #1d4ed8); border: 2px solid #60a5fa; color: white; }
+        .piece.enemy { background: linear-gradient(135deg, #ef4444, #b91c1c); border: 2px solid #f87171; color: white; }
+        .piece:hover { transform: scale(1.05); }
+        .piece i { font-size: 1.2rem; margin-bottom: 2px; }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 2000; opacity: 1; transition: 0.3s;
+        }
+        .modal-overlay.hidden { opacity: 0; pointer-events: none; }
+
+        .modal-content {
+            background: #1f2937; padding: 30px; border-radius: 12px; text-align: center;
+            border: 2px solid #374151; box-shadow: 0 20px 40px rgba(0,0,0,0.6); max-width: 450px; width: 90%;
+        }
+
+        .modal-content h2 { color: #fbbf24; margin-bottom: 15px; font-size: 1.5rem;}
+        .arbiter-result { font-size: 1.1rem; margin: 20px 0; font-weight: 600; line-height: 1.4;}
+        
+        button.primary-btn {
+            background: var(--primary); color: white; border: none; padding: 12px; width: 100%;
+            border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem; margin-bottom: 10px; display: flex; justify-content: center; align-items: center; gap: 8px;
+        }
+        button.primary-btn:hover { background: var(--primary-hover); }
+        button.secondary-btn {
+            background: #374151; color: white; border: none; padding: 12px; width: 100%;
+            border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem; margin-top: 10px;
+        }
+        button.secondary-btn:hover { background: #4b5563; }
+
+        input[type="text"] {
+            width: 100%; padding: 12px; margin-bottom: 15px; border: 2px solid #374151;
+            border-radius: 6px; font-size: 1rem; text-align: center; background: #111827; color: white; outline: none;
+        }
+        .token-box { background: #111827; padding: 15px; border-radius: 6px; font-family: monospace; font-size: 1.2rem; margin-bottom: 15px; border: 1px dashed #fbbf24; color: #fbbf24; word-break: break-all;}
+
+        .rules-content { text-align: left; font-size: 0.95rem; line-height: 1.5; color: #d1d5db; max-height: 60vh; overflow-y: auto; padding-right: 10px; }
+        .rules-content h3 { color: #60a5fa; margin-top: 15px; margin-bottom: 5px; font-size: 1.1rem; }
+        .rules-content ul { padding-left: 20px; margin-bottom: 10px; }
+        .rules-content li { margin-bottom: 4px; }
+        .rank-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        .rank-table th, .rank-table td { border: 1px solid #4b5563; padding: 6px; text-align: left; }
+        .rank-table th { background: #374151; color: #fbbf24; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand"><i class="fas fa-shield-alt"></i> Game of the Generals</div>
+        <div class="controls">
+            <button class="help-btn" onclick="openHelp()"><i class="fas fa-question-circle"></i> Help</button>
+            <button onclick="location.reload()"><i class="fas fa-home"></i> Menu</button>
+        </div>
+    </header>
+
+    <div class="game-header-area">
+        <div id="status-bar" style="display: none;">Waiting to start...</div>
+        <button id="ready-btn" onclick="confirmSetup()"><i class="fas fa-check"></i> Ready for Battle</button>
+    </div>
+
+    <div id="board-container">
+        <div class="board" id="board"></div>
+    </div>
+
+    <div id="menu-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Select Game Mode</h2>
+            <button class="primary-btn" onclick="startGame('cpu')"><i class="fas fa-robot"></i> Single Player vs CPU</button>
+            <button class="primary-btn" style="background: #059669;" onclick="showHostMenu()"><i class="fas fa-wifi"></i> Host Game (Create Token)</button>
+            <button class="primary-btn" style="background: #8b5cf6;" onclick="showJoinMenu()"><i class="fas fa-sign-in-alt"></i> Join Game (Enter Token)</button>
+        </div>
+    </div>
+
+    <div id="help-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width: 550px;">
+            <h2><i class="fas fa-book"></i> How to Play</h2>
+            <div class="rules-content">
+                <p><strong>Setup Phase:</strong> Before the battle begins, your pieces are placed in the bottom 3 rows. Click any two pieces (or an empty square) in your zone to swap their positions. Click "Ready" when done.</p>
+                <p><strong>Objective:</strong> Capture the opponent's Flag, or safely maneuver your Flag to the opposite end of the board.</p>
+                
+                <h3>Movement</h3>
+                <ul>
+                    <li>You can move one piece per turn.</li>
+                    <li>Pieces can move one square in any direction: forward, backward, left, right, or diagonally.</li>
+                </ul>
+
+                <h3>Combat & The Arbiter</h3>
+                <ul>
+                    <li>When your piece attacks an enemy piece, the Arbiter resolves the battle automatically.</li>
+                    <li>The higher-ranked piece wins and eliminates the lower-ranked piece.</li>
+                    <li>If both pieces have the same rank, both are eliminated.</li>
+                    <li>The opponent's rank remains hidden unless you tie and both pieces die!</li>
+                </ul>
+
+                <h3>Piece Hierarchy (Highest to Lowest)</h3>
+                <table class="rank-table">
+                    <tr><th>Rank / Piece</th><th>Special Rules</th></tr>
+                    <tr><td>Spy</td><td>Eliminates all Officers (Generals down to Sgt). Is eliminated by the Private.</td></tr>
+                    <tr><td>5-Star General</td><td>Eliminates all lower ranks.</td></tr>
+                    <tr><td>4-Star General</td><td>Eliminates all lower ranks.</td></tr>
+                    <tr><td>3-Star General</td><td>Eliminates all lower ranks.</td></tr>
+                    <tr><td>2-Star General</td><td>Eliminates all lower ranks.</td></tr>
+                    <tr><td>1-Star General</td><td>Eliminates all lower ranks.</td></tr>
+                    <tr><td>Colonel</td><td>Eliminates all lower ranks.</td></tr>
+                    <tr><td>Lt. Colonel</td><td>Eliminates all lower ranks.</td></tr>
+                    <tr><td>Major</td><td>Eliminates all lower ranks.</td></tr>
+                    <tr><td>Captain</td><td>Eliminates all lower ranks.</td></tr>
+                    <tr><td>1st Lieutenant</td><td>Eliminates all lower ranks.</td></tr>
+                    <tr><td>2nd Lieutenant</td><td>Eliminates all lower ranks.</td></tr>
+                    <tr><td>Sergeant</td><td>Eliminates all lower ranks.</td></tr>
+                    <tr><td>Corporal</td><td>Eliminates all lower ranks.</td></tr>
+                    <tr><td>Private</td><td>Eliminates the Flag and the Spy! Loses to all Officers.</td></tr>
+                    <tr><td>Flag</td><td>Eliminates nothing. Can be captured by any piece.</td></tr>
+                </table>
+            </div>
+            <button class="primary-btn" style="margin-top: 15px;" onclick="closeHelp()">Close Help</button>
+        </div>
+    </div>
+
+    <div id="host-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2>Host Multiplayer</h2>
+            <p style="margin-bottom: 15px; font-size: 0.9rem; color: #d1d5db;">Send this token to your opponent.</p>
+            <div class="token-box" id="host-token">Generating...</div>
+            <button class="primary-btn" onclick="copyToken()"><i class="far fa-copy"></i> Copy Token</button>
+            <p id="host-status" style="margin-top: 15px; color: #fbbf24;"><i class="fas fa-spinner fa-spin"></i> Waiting for opponent...</p>
+            <button class="secondary-btn" onclick="location.reload()">Cancel</button>
+        </div>
+    </div>
+
+    <div id="join-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2>Join Multiplayer</h2>
+            <input type="text" id="join-token-input" placeholder="Paste Token Here">
+            <button class="primary-btn" style="background: #8b5cf6;" onclick="joinGame()"><i class="fas fa-play"></i> Connect & Play</button>
+            <button class="secondary-btn" onclick="location.reload()">Cancel</button>
+        </div>
+    </div>
+
+    <div id="arbiter-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2><i class="fas fa-balance-scale"></i> Arbiter</h2>
+            <div id="arbiter-text" class="arbiter-result">Resolving combat...</div>
+            <button class="primary-btn" onclick="closeArbiter()">Continue</button>
+        </div>
+    </div>
+
+    <div id="gameover-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 id="gameover-title">Game Over</h2>
+            <div id="gameover-text" class="arbiter-result"></div>
+            <button class="primary-btn" onclick="location.reload()">Back to Menu</button>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME CONSTANTS & STATE ---
+        const PIECE_TYPES = [
+            { id: 15, name: 'Spy', icon: 'user-secret', count: 2 },
+            { id: 14, name: '5-Star', icon: 'star', count: 1 },
+            { id: 13, name: '4-Star', icon: 'star', count: 1 },
+            { id: 12, name: '3-Star', icon: 'star', count: 1 },
+            { id: 11, name: '2-Star', icon: 'star', count: 1 },
+            { id: 10, name: '1-Star', icon: 'star', count: 1 },
+            { id: 9,  name: 'Col.', icon: 'angle-double-up', count: 1 },
+            { id: 8,  name: 'Lt. Col.', icon: 'angle-double-up', count: 1 },
+            { id: 7,  name: 'Major', icon: 'leaf', count: 1 },
+            { id: 6,  name: 'Captain', icon: 'grip-lines', count: 1 },
+            { id: 5,  name: '1st Lt.', icon: 'minus', count: 1 },
+            { id: 4,  name: '2nd Lt.', icon: 'minus', count: 1 },
+            { id: 3,  name: 'Sgt.', icon: 'chevron-up', count: 1 },
+            { id: 2,  name: 'Corp.', icon: 'chevron-up', count: 1 },
+            { id: 1,  name: 'Private', icon: 'chevron-up', count: 6 },
+            { id: 0,  name: 'Flag', icon: 'flag', count: 1 },
+        ];
+
+        let board = [];
+        let gameMode = ''; // 'cpu', 'host', 'client'
+        let gamePhase = 'menu'; // 'menu', 'setup', 'waiting', 'playing'
+        let isMyTurn = false;
+        let selectedSquare = null;
+        let validMoves = [];
+        let enemySetupData = null; // Stores enemy layout during multiplayer setup
+
+        function openHelp() { document.getElementById('help-modal').classList.remove('hidden'); }
+        function closeHelp() { document.getElementById('help-modal').classList.add('hidden'); }
+
+        // --- MULTIPLAYER P2P (PeerJS) ---
+        let peer = null;
+        let conn = null;
+
+        function showHostMenu() {
+            document.getElementById('menu-modal').classList.add('hidden');
+            document.getElementById('host-modal').classList.remove('hidden');
+            
+            peer = new Peer();
+            peer.on('open', id => { document.getElementById('host-token').innerText = id; });
+            
+            peer.on('connection', connection => {
+                conn = connection;
+                setupConnection();
+                document.getElementById('host-modal').classList.add('hidden');
+                startGame('host');
+            });
+        }
+
+        function showJoinMenu() {
+            document.getElementById('menu-modal').classList.add('hidden');
+            document.getElementById('join-modal').classList.remove('hidden');
+        }
+
+        function joinGame() {
+            const token = document.getElementById('join-token-input').value.trim();
+            if(!token) return;
+            
+            peer = new Peer();
+            peer.on('open', () => {
+                conn = peer.connect(token);
+                setupConnection();
+                document.getElementById('join-modal').classList.add('hidden');
+                startGame('client');
+            });
+        }
+
+        function copyToken() {
+            const token = document.getElementById('host-token').innerText;
+            navigator.clipboard.writeText(token);
+            alert("Token copied to clipboard!");
+        }
+
+        function setupConnection() {
+            conn.on('data', data => {
+                if (data.type === 'ready') {
+                    enemySetupData = data.setup;
+                    // If we are already waiting, start the battle
+                    if (gamePhase === 'waiting') {
+                        startMultiplayerBattle();
+                    }
+                } else if (data.type === 'move') {
+                    let flippedFromR = 7 - data.fromR;
+                    let flippedFromC = 8 - data.fromC;
+                    let flippedToR = 7 - data.toR;
+                    let flippedToC = 8 - data.toC;
+                    executeMove(flippedFromR, flippedFromC, flippedToR, flippedToC, false);
+                }
+            });
+        }
+
+        // --- GAME LOGIC ---
+        function generateArmy(owner) {
+            let army = [];
+            PIECE_TYPES.forEach(type => {
+                for (let i = 0; i < type.count; i++) {
+                    army.push({ owner: owner, id: type.id, name: type.name, icon: type.icon });
+                }
+            });
+            for (let i = army.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [army[i], army[j]] = [army[j], army[i]];
+            }
+            return army;
+        }
+
+        function startGame(mode) {
+            gameMode = mode;
+            gamePhase = 'setup';
+            enemySetupData = null;
+            board = Array(8).fill(null).map(() => Array(9).fill(null));
+            
+            document.getElementById('menu-modal').classList.add('hidden');
+            document.getElementById('board-container').style.display = 'block';
+            document.getElementById('status-bar').style.display = 'block';
+            document.getElementById('ready-btn').style.display = 'inline-block';
+
+            // Auto-fill player pieces in bottom 3 rows
+            let myArmy = generateArmy('player');
+            let mySlots = Array.from({length: 27}, (_, i) => i).sort(() => Math.random() - 0.5);
+
+            for (let i = 0; i < 21; i++) {
+                let r = 5 + Math.floor(mySlots[i] / 9);
+                let c = mySlots[i] % 9;
+                board[r][c] = myArmy[i];
+            }
+
+            if (gameMode === 'cpu') {
+                // Auto-fill CPU
+                let cpuArmy = generateArmy('enemy');
+                let cpuSlots = Array.from({length: 27}, (_, i) => i).sort(() => Math.random() - 0.5);
+                for (let i = 0; i < 21; i++) {
+                    let r = Math.floor(cpuSlots[i] / 9);
+                    let c = cpuSlots[i] % 9;
+                    board[r][c] = cpuArmy[i];
+                }
+            }
+
+            updateStatus("Setup Phase: Click two squares to swap pieces.");
+            renderBoard();
+        }
+
+        function confirmSetup() {
+            document.getElementById('ready-btn').style.display = 'none';
+            selectedSquare = null;
+            renderBoard(); // Clear setup highlights
+
+            if (gameMode === 'cpu') {
+                gamePhase = 'playing';
+                isMyTurn = true;
+                updateStatus("Your Turn (Blue)");
+            } else {
+                gamePhase = 'waiting';
+                let mySetup = [];
+                for (let r = 5; r < 8; r++) {
+                    for (let c = 0; c < 9; c++) {
+                        if (board[r][c]) {
+                            mySetup.push({ r: r, c: c, piece: board[r][c] });
+                        }
+                    }
+                }
+                conn.send({ type: 'ready', setup: mySetup });
+                updateStatus("Waiting for opponent to finish setup...");
+
+                // If opponent is already ready
+                if (enemySetupData) {
+                    startMultiplayerBattle();
+                }
+            }
+        }
+
+        function startMultiplayerBattle() {
+            // Apply enemy setup
+            enemySetupData.forEach(item => {
+                let flippedR = 7 - item.r;
+                let flippedC = 8 - item.c;
+                let piece = item.piece;
+                piece.owner = 'enemy';
+                board[flippedR][flippedC] = piece;
+            });
+            
+            gamePhase = 'playing';
+            isMyTurn = (gameMode === 'host'); // Host always goes first
+            renderBoard();
+            updateStatus(isMyTurn ? "Your Turn (Blue)" : "Opponent's Turn (Red)");
+        }
+
+        function renderBoard() {
+            const boardDiv = document.getElementById('board');
+            boardDiv.innerHTML = '';
+
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 9; c++) {
+                    const square = document.createElement('div');
+                    square.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
+                    square.dataset.r = r;
+                    square.dataset.c = c;
+
+                    // Highlight setup zone
+                    if (gamePhase === 'setup' && r >= 5) {
+                        square.classList.add('setup-zone');
+                    }
+
+                    if (selectedSquare && selectedSquare.r === r && selectedSquare.c === c) {
+                        square.classList.add('selected');
+                    }
+                    if (validMoves.some(m => m.r === r && m.c === c)) {
+                        square.classList.add('highlight');
+                    }
+
+                    const piece = board[r][c];
+                    if (piece) {
+                        const pieceDiv = document.createElement('div');
+                        pieceDiv.className = `piece ${piece.owner}`;
+                        
+                        if (piece.owner === 'player') {
+                            pieceDiv.innerHTML = `<i class="fas fa-${piece.icon}"></i><span>${piece.name}</span>`;
+                        } else {
+                            // Only show enemy shields once playing, or if it's CPU setup
+                            pieceDiv.innerHTML = `<i class="fas fa-shield-alt" style="font-size: 1.5rem;"></i>`;
+                        }
+                        square.appendChild(pieceDiv);
+                    }
+
+                    square.addEventListener('click', () => handleSquareClick(r, c));
+                    boardDiv.appendChild(square);
+                }
+            }
+        }
+
+        function handleSquareClick(r, c) {
+            // Setup Phase Logic (Swapping pieces)
+            if (gamePhase === 'setup') {
+                if (r < 5) return; // Can only interact with bottom 3 rows
+
+                if (selectedSquare) {
+                    // Swap pieces
+                    let temp = board[r][c];
+                    board[r][c] = board[selectedSquare.r][selectedSquare.c];
+                    board[selectedSquare.r][selectedSquare.c] = temp;
+                    selectedSquare = null;
+                    renderBoard();
+                } else {
+                    // Select first piece/square
+                    if (board[r][c]) {
+                        selectedSquare = { r, c };
+                        renderBoard();
+                    }
+                }
+                return;
+            }
+
+            // Playing Phase Logic
+            if (gamePhase !== 'playing' || !isMyTurn) return;
+
+            const clickedPiece = board[r][c];
+
+            if (clickedPiece && clickedPiece.owner === 'player') {
+                selectedSquare = { r, c };
+                calculateValidMoves(r, c);
+                renderBoard();
+                return;
+            }
+
+            if (selectedSquare && validMoves.some(m => m.r === r && m.c === c)) {
+                executeMove(selectedSquare.r, selectedSquare.c, r, c, true);
+            }
+        }
+
+        function calculateValidMoves(r, c) {
+            validMoves = [];
+            const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]];
+            const piece = board[r][c];
+
+            dirs.forEach(([dr, dc]) => {
+                let nr = r + dr, nc = c + dc;
+                if (nr >= 0 && nr < 8 && nc >= 0 && nc < 9) {
+                    let target = board[nr][nc];
+                    if (!target || target.owner !== piece.owner) {
+                        validMoves.push({ r: nr, c: nc });
+                    }
+                }
+            });
+        }
+
+        function resolveCombat(atkRank, defRank) {
+            if (atkRank === defRank) return 0;
+            if (atkRank === 15 && defRank === 1) return -1;
+            if (atkRank === 1 && defRank === 15) return 1; 
+            if (atkRank === 15) return 1; 
+            if (defRank === 15) return -1;
+            if (atkRank === 0) return -1;
+            if (defRank === 0) return 1;  
+            return atkRank > defRank ? 1 : -1;
+        }
+
+        function executeMove(fromR, fromC, toR, toC, isLocalMove) {
+            const attacker = board[fromR][fromC];
+            const defender = board[toR][toC];
+
+            if (isLocalMove && gameMode !== 'cpu') {
+                conn.send({ type: 'move', fromR: fromR, fromC: fromC, toR: toR, toC: toC });
+            }
+
+            board[fromR][fromC] = null;
+            selectedSquare = null;
+            validMoves = [];
+
+            if (defender) {
+                let result = resolveCombat(attacker.id, defender.id);
+                let resultText = "";
+                let iAmAttacking = (attacker.owner === 'player');
+
+                let myPieceName = iAmAttacking ? attacker.name : defender.name;
+                let enemyPieceName = iAmAttacking ? defender.name : attacker.name;
+
+                if (result === 1) { 
+                    board[toR][toC] = attacker;
+                    resultText = iAmAttacking 
+                        ? `Your ${myPieceName} defeated the Enemy ${enemyPieceName}!`
+                        : `Your ${myPieceName} was defeated by the Enemy ${enemyPieceName}!`;
+                    checkFlagWinCondition(defender, attacker.owner);
+                } else if (result === -1) { 
+                    board[toR][toC] = defender;
+                    resultText = iAmAttacking 
+                        ? `Your ${myPieceName} was defeated by the Enemy ${enemyPieceName}!`
+                        : `Your ${myPieceName} defeated the Enemy ${enemyPieceName}!`;
+                    checkFlagWinCondition(attacker, defender.owner);
+                } else { 
+                    board[toR][toC] = null;
+                    resultText = `Both pieces were eliminated! (Your ${myPieceName} vs Enemy ${enemyPieceName})`;
+                    checkFlagWinCondition(attacker, 'none');
+                    checkFlagWinCondition(defender, 'none');
+                }
+
+                showArbiter(resultText);
+            } else {
+                board[toR][toC] = attacker;
+                
+                if (attacker.id === 0) {
+                    if (attacker.owner === 'player' && toR === 0) return triggerGameOver('Victory!', 'Your Flag reached the enemy base!');
+                    if (attacker.owner === 'enemy' && toR === 7) return triggerGameOver('Defeat!', 'The Enemy Flag reached your base!');
+                }
+
+                endTurn();
+            }
+        }
+
+        function checkFlagWinCondition(deadPiece, winnerOwner) {
+            if (deadPiece.id === 0) {
+                if (deadPiece.owner === 'enemy') {
+                    triggerGameOver('Victory!', 'You captured the Enemy Flag!');
+                } else {
+                    triggerGameOver('Defeat!', 'Your Flag was captured!');
+                }
+            }
+        }
+
+        function showArbiter(text) {
+            document.getElementById('arbiter-text').innerText = text;
+            document.getElementById('arbiter-modal').classList.remove('hidden');
+        }
+
+        function closeArbiter() {
+            document.getElementById('arbiter-modal').classList.add('hidden');
+            if (document.getElementById('gameover-modal').classList.contains('hidden')) {
+                endTurn();
+            }
+        }
+
+        function triggerGameOver(title, text) {
+            document.getElementById('gameover-title').innerText = title;
+            document.getElementById('gameover-title').style.color = title === 'Victory!' ? '#10b981' : '#ef4444';
+            document.getElementById('gameover-text').innerText = text;
+            
+            setTimeout(() => {
+                document.getElementById('arbiter-modal').classList.add('hidden');
+                document.getElementById('gameover-modal').classList.remove('hidden');
+            }, 500); 
+        }
+
+        function endTurn() {
+            isMyTurn = !isMyTurn;
+            renderBoard();
+
+            if (isMyTurn) {
+                updateStatus("Your Turn (Blue)");
+            } else {
+                if (gameMode === 'cpu') {
+                    updateStatus("CPU is thinking...");
+                    setTimeout(makeCPUMove, 800);
+                } else {
+                    updateStatus("Opponent's Turn (Red)");
+                }
+            }
+        }
+
+        function updateStatus(text) {
+            let icon = 'fa-info-circle';
+            if (gamePhase === 'playing') {
+                icon = isMyTurn ? 'fa-user' : (gameMode === 'cpu' ? 'fa-robot' : 'fa-hourglass-half');
+            }
+            document.getElementById('status-bar').innerHTML = `<i class="fas ${icon}"></i> ${text}`;
+        }
+
+        // --- CPU AI ---
+        function makeCPUMove() {
+            let cpuPieces = [];
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 9; c++) {
+                    if (board[r][c] && board[r][c].owner === 'enemy') {
+                        calculateValidMoves(r, c);
+                        validMoves.forEach(m => {
+                            cpuPieces.push({ fromR: r, fromC: c, toR: m.r, toC: m.c });
+                        });
+                    }
+                }
+            }
+
+            if (cpuPieces.length === 0) return triggerGameOver('Victory!', 'The enemy has no valid moves left.');
+
+            cpuPieces.sort((a, b) => b.toR - a.toR); 
+            let moveIndex = Math.floor(Math.random() * Math.min(5, cpuPieces.length));
+            let chosenMove = cpuPieces[moveIndex];
+
+            validMoves = [{ r: chosenMove.toR, c: chosenMove.toC }];
+            executeMove(chosenMove.fromR, chosenMove.fromC, chosenMove.toR, chosenMove.toC, false);
+        }
+    </script>
+</body>
+</html>
