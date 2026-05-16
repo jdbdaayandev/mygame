@@ -247,7 +247,14 @@
             <ul class="nav-links">
                 <li><a href="#"><i class="fas fa-home"></i> Home</a></li>
                 <li><a href="#"><i class="fas fa-trophy"></i> Leaderboards</a></li>
-                <li><a href="#"><i class="fas fa-user"></i> My Profile</a></li>
+                <li id="auth-container">
+                    <button id="login-btn" class="play-btn" style="padding: 8px 16px; border: none; cursor: pointer;"><i class="fab fa-google"></i> Login</button>
+                    <div id="user-profile" style="display: none; align-items: center; gap: 10px;">
+                        <img id="user-pfp" src="" style="width: 32px; height: 32px; border-radius: 50%;">
+                        <span id="user-name" style="font-weight: 600;"></span>
+                        <button id="logout-btn" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer;"><i class="fas fa-sign-out-alt"></i></button>
+                    </div>
+                </li>
             </ul>
         </div>
     </header>
@@ -369,6 +376,6 @@
     <footer>
         <p>&copy; 2026 Jdbd Games. All rights reserved.</p>
     </footer>
-
+<script type="module" src="script.js"></script>
 </body>
 </html>
