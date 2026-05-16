@@ -38,9 +38,17 @@
         }
 
         header {
-            background: var(--header-bg); padding: 15px 25px; width: 100%;
-            display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 100;
+            position: sticky; /* Keeps the navbar fixed at the top */
+            top: 0;
+            z-index: 3000; /* Forces the navbar to sit above the modals (2000) */
+            
+            background: var(--header-bg); 
+            padding: 15px 25px; 
+            width: 100%;
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3); 
             backdrop-filter: blur(10px);
         }
 
@@ -163,7 +171,7 @@
 <body>
 
     <header>
-        <a href="#" class="back-btn" onclick="location.reload()"><i class="fas fa-chevron-left"></i> Menu</a>
+        <a href="index.html" class="back-btn" onclick="location.reload()"><i class="fas fa-chevron-left"></i> Menu</a>
         <div class="game-status" id="status-text">Ready to play</div>
         <div class="controls"><button onclick="location.reload()"><i class="fas fa-redo-alt"></i> Restart</button></div>
     </header>
@@ -458,48 +466,99 @@
             const isRed = piece === RED || piece === RED_KING;
             const isKing = piece === RED_KING || piece === BLACK_KING;
             
-            // Separate directions for moving vs jumping (for the backward jump rule)
-            const moveDirs = [];
-            const jumpDirs = [];
-
             if (isKing) {
-                moveDirs.push(-1, 1);
-                jumpDirs.push(-1, 1);
-            } else if (isRed) {
-                moveDirs.push(-1);
-                jumpDirs.push(-1);
-                if (gameRules.normalEatBackward) jumpDirs.push(1); // Backwards jump allowed
-            } else { // Black
-                moveDirs.push(1);
-                jumpDirs.push(1);
-                if (gameRules.normalEatBackward) jumpDirs.push(-1); // Backwards jump allowed
-            }
+                // --- FLYING KING LOGIC ---
+                // Kings can move in all 4 diagonal directions
+                const directions = [
+                    { dRow: -1, dCol: -1 }, { dRow: -1, dCol: 1 },
+                    { dRow: 1, dCol: -1 },  { dRow: 1, dCol: 1 }
+                ];
 
-            // 1. Calculate Regular Moves
-            moveDirs.forEach(dRow => {
-                [-1, 1].forEach(dCol => {
-                    let nr = r + dRow, nc = c + dCol;
-                    if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && board[nr][nc] === EMPTY) {
-                        validMoves.push({ fromR: r, fromC: c, toR: nr, toC: nc, isJump: false });
-                    }
-                });
-            });
-
-            // 2. Calculate Jumps
-            jumpDirs.forEach(dRow => {
-                [-1, 1].forEach(dCol => {
-                    let nr = r + dRow, nc = c + dCol; // Immediate neighbor
-                    let jr = r + dRow * 2, jc = c + dCol * 2; // Jump target
-                    
-                    if (jr >= 0 && jr < 8 && jc >= 0 && jc < 8 && board[jr][jc] === EMPTY) {
-                        let midPiece = board[nr][nc];
-                        let isOpponent = isRed ? (midPiece === BLACK || midPiece === BLACK_KING) : (midPiece === RED || midPiece === RED_KING);
-                        if (isOpponent) {
-                            validMoves.push({ fromR: r, fromC: c, toR: jr, toC: jc, isJump: true, capR: nr, capC: nc });
+                directions.forEach(({ dRow, dCol }) => {
+                    // 1. Calculate Regular Moves (Sliding)
+                    let step = 1;
+                    while (true) {
+                        let nr = r + dRow * step, nc = c + dCol * step;
+                        if (nr < 0 || nr >= 8 || nc < 0 || nc >= 8) break; // Hit the edge of board
+                        
+                        if (board[nr][nc] === EMPTY) {
+                            validMoves.push({ fromR: r, fromC: c, toR: nr, toC: nc, isJump: false });
+                        } else {
+                            break; // Blocked by a piece
                         }
+                        step++;
+                    }
+
+                    // 2. Calculate Jumps (Flying over exactly one opponent)
+                    step = 1;
+                    let foundOpponent = false;
+                    let capR = -1, capC = -1;
+
+                    while (true) {
+                        let nr = r + dRow * step, nc = c + dCol * step;
+                        if (nr < 0 || nr >= 8 || nc < 0 || nc >= 8) break; // Hit the edge
+                        
+                        let currentPiece = board[nr][nc];
+                        
+                        if (!foundOpponent) {
+                            // Look for the first piece in the line
+                            if (currentPiece !== EMPTY) {
+                                let isOpponent = isRed ? (currentPiece === BLACK || currentPiece === BLACK_KING) : (currentPiece === RED || currentPiece === RED_KING);
+                                if (isOpponent) {
+                                    foundOpponent = true; // Target acquired
+                                    capR = nr;
+                                    capC = nc;
+                                } else {
+                                    break; // Blocked by your own piece
+                                }
+                            }
+                        } else {
+                            // Opponent found, look for empty squares behind it to land on
+                            if (currentPiece === EMPTY) {
+                                validMoves.push({ fromR: r, fromC: c, toR: nr, toC: nc, isJump: true, capR: capR, capC: capC });
+                            } else {
+                                break; // Blocked by another piece (Kings can't jump over 2 pieces in a row)
+                            }
+                        }
+                        step++;
                     }
                 });
-            });
+
+            } else {
+                // --- NORMAL PIECE LOGIC ---
+                const moveDirs = isRed ? [-1] : [1];
+                const jumpDirs = isRed ? [-1] : [1];
+                
+                if (gameRules.normalEatBackward) {
+                    jumpDirs.push(isRed ? 1 : -1); // Allow backwards jumps if rule is enabled
+                }
+
+                // 1. Regular Moves
+                moveDirs.forEach(dRow => {
+                    [-1, 1].forEach(dCol => {
+                        let nr = r + dRow, nc = c + dCol;
+                        if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && board[nr][nc] === EMPTY) {
+                            validMoves.push({ fromR: r, fromC: c, toR: nr, toC: nc, isJump: false });
+                        }
+                    });
+                });
+
+                // 2. Jumps
+                jumpDirs.forEach(dRow => {
+                    [-1, 1].forEach(dCol => {
+                        let nr = r + dRow, nc = c + dCol; // Immediate neighbor
+                        let jr = r + dRow * 2, jc = c + dCol * 2; // Jump target
+                        
+                        if (jr >= 0 && jr < 8 && jc >= 0 && jc < 8 && board[jr][jc] === EMPTY) {
+                            let midPiece = board[nr][nc];
+                            let isOpponent = isRed ? (midPiece === BLACK || midPiece === BLACK_KING) : (midPiece === RED || midPiece === RED_KING);
+                            if (isOpponent) {
+                                validMoves.push({ fromR: r, fromC: c, toR: jr, toC: jc, isJump: true, capR: nr, capC: nc });
+                            }
+                        }
+                    });
+                });
+            }
         }
 
         function getAllJumpsForPlayer(player) {
